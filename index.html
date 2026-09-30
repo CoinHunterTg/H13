@@ -202,11 +202,9 @@
                             <span>⚔️ Урон:</span>
                             <span id="siege-selected-cell-title" class="text-amber-400 font-mono text-[11px]">Не выбрана</span>
                         </div>
-                        <!-- Кнопка очистки клетки для руководства -->
                         <button id="officer-clear-cell-btn" onclick="clearCellDamage()" class="text-[9px] bg-red-950 hover:bg-red-900 text-red-300 border border-red-800 px-1.5 py-0.5 rounded font-bold hidden shrink-0" title="Очистить весь урон по клетке">🗑 Сбросить клетку</button>
                     </h2>
                     
-                    <!-- Панель ввода личного урона (если клетка выбрана) -->
                     <div id="my-damage-panel" class="mb-2 p-2 bg-slate-950/80 rounded border border-slate-800 hidden">
                         <div class="text-[10px] font-bold text-amber-300 mb-1 flex justify-between items-center">
                             <span>Ваш вклад в клетку:</span>
@@ -216,7 +214,6 @@
                             </div>
                         </div>
                         <div id="siege-action-options" class="hidden mt-2 pt-2 border-t border-slate-800 space-y-1.5">
-                            <!-- Удар из убежища -->
                             <div id="opt-shelter-wrap" class="flex items-center justify-between text-[11px]">
                                 <span class="text-slate-300">Убежище (+1B):</span>
                                 <div class="flex items-center gap-1">
@@ -225,7 +222,6 @@
                                     <button onclick="modifyDamage('shelter', 1000000000)" class="px-1.5 bg-slate-800 hover:bg-slate-700 rounded text-green-400 font-bold">+</button>
                                 </div>
                             </div>
-                            <!-- Динамит -->
                             <div class="flex items-center justify-between text-[11px]">
                                 <span class="text-slate-300">Динамит (+1B):</span>
                                 <div class="flex items-center gap-1">
@@ -234,7 +230,6 @@
                                     <button onclick="modifyDamage('dynamite', 1000000000)" class="px-1.5 bg-slate-800 hover:bg-slate-700 rounded text-green-400 font-bold">+</button>
                                 </div>
                             </div>
-                            <!-- Бомба -->
                             <div class="flex items-center justify-between text-[11px]">
                                 <span class="text-slate-300">Бомба (+200M):</span>
                                 <div class="flex items-center gap-1">
@@ -315,6 +310,14 @@
                         <input type="text" id="search-input" oninput="renderPlayersList()" placeholder="🔍 Поиск..." class="bg-slate-950 text-white text-xs border border-slate-800 rounded px-2 py-0.5 focus:outline-none focus:border-amber-500 w-full sm:w-28">
                     </div>
                 </div>
+
+                <div id="officerManagementPanel" class="mb-2 p-2 bg-slate-950/80 rounded border border-slate-800 hidden">
+                    <div class="text-[10px] font-bold text-amber-300 mb-1">Управление бойцами:</div>
+                    <div class="flex gap-1">
+                        <input type="text" id="newFighterName" placeholder="Имя нового бойца..." class="bg-slate-950 text-white text-[11px] border border-slate-700 rounded px-2 py-1 flex-1 focus:outline-none focus:border-amber-500">
+                        <button onclick="addFighter()" class="bg-amber-600 hover:bg-amber-500 text-white text-[10px] font-bold px-2 py-1 rounded transition-colors">Добавить</button>
+                    </div>
+                </div>
                 
                 <div id="players-list" class="overflow-y-auto flex-1 pr-1 space-y-1.5 text-xs"></div>
 
@@ -353,27 +356,31 @@
         </div>
     </div>
 
+    <!-- МОДАЛЬНОЕ ОКНО ПОДТВЕРЖДЕНИЯ УДАЛЕНИЯ -->
+    <div id="confirm-delete-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50 hidden">
+        <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl max-w-xs w-full mx-4 shadow-2xl space-y-3 text-center">
+            <h3 class="text-sm font-bold text-red-400">⚠️ Подтверждение удаления</h3>
+            <p class="text-xs text-slate-300">Вы действительно хотите удалить бойца <strong id="modal-fighter-name" class="text-amber-400"></strong>?</p>
+            <div class="flex gap-2 pt-2">
+                <button onclick="closeDeleteModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs py-2 rounded-lg transition-colors font-medium">Отмена</button>
+                <button onclick="executeDeleteFighter()" class="flex-1 bg-red-600 hover:bg-red-500 text-white text-xs py-2 rounded-lg transition-colors font-bold">Удалить</button>
+            </div>
+        </div>
+    </div>
+
     <script>
+        // Вставьте ваши реальные данные Supabase:
         const SUPABASE_URL = 'https://odlxxtzuchpaykttycgi.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_Qo59JT3EGIunTT-XJDvfxw_34sKna-7';
         
         let supabaseClient = null;
-        if (SUPABASE_URL !== 'ВСТАВЬ_СЮДА_URL_ПРОЕКТА' && SUPABASE_ANON_KEY !== 'ВСТАВЬ_СЮДА_ANON_КЛЮЧ') {
+        if (SUPABASE_URL && SUPABASE_ANON_KEY) {
             supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         }
 
-        const CLAN_ROLES = {
-            leaders: ["satoH13"],
-            officers: ["Gargoyle_D", "TwisSP"],
-            members: [
-                "CryptoVSB", "maskim_gurskii", "Burhuy", "psychxelbr", 
-                "Yurii_SINK", "Donislife", "Bizmat", "Voucher12356", 
-                "seg_ami", "cac_va", "den0311", "amina_yaa", 
-                "Darkbeast1991", "Charlie881936", "olololosh", "OdysseysShake"
-            ]
-        };
-
-        const ALL_MEMBERS = [...CLAN_ROLES.leaders, ...CLAN_ROLES.officers, ...CLAN_ROLES.members];
+        // Динамический список бойцов (подгружается из таблицы fighters)
+        let dynamicMembers = [];
+        let fighterToDeleteName = null;
 
         const CELLS_DATA = [
             { id: 1, key: "P1", name: "Лас Вегас", color: "purple", x: 56.9, y: 46.8, size: 8.5 },
@@ -414,7 +421,7 @@
         let sheltersState = {}; 
         let siegeState = {}; 
         let siegeMissionState = {}; 
-        let siegeDamageState = {}; // { cellId: { playerName: { shelter: X, dynamite: Y, bomb: Z } } }
+        let siegeDamageState = {}; 
         let clanAnnouncement = 'Привет бойцам! Сверяем точки по плану.';
         let customBgUrl = localStorage.getItem('proto_custom_bg_v1') || '';
         
@@ -423,6 +430,16 @@
         let viewingPlayer = '';
         let selectedSiegeCellId = null;
         let isMissionEditingMode = false;
+
+        function getAllMembers() {
+            return dynamicMembers.map(f => f.name);
+        }
+
+        function getFighterRole(nick) {
+            let found = dynamicMembers.find(f => f.name === nick);
+            if (found && found.role) return found.role;
+            return 'member';
+        }
 
         function applyCustomBackground() {
             if (customBgUrl) {
@@ -467,6 +484,11 @@
             if (!supabaseClient) return;
 
             try {
+                const { data: fightersData, error: fightersErr } = await supabaseClient.from('fighters').select('*');
+                if (!fightersErr && fightersData) {
+                    dynamicMembers = fightersData;
+                }
+
                 const { data: sheltersData, error: sheltersErr } = await supabaseClient.from('shelters').select('*');
                 if (!sheltersErr && sheltersData) {
                     sheltersState = {};
@@ -529,6 +551,7 @@
             }
             if (currentUserRole) {
                 document.getElementById('auth-screen').classList.add('hidden');
+                await loadDataFromSupabase();
                 setupProfileSelector();
                 document.getElementById('select-profile-screen').classList.remove('hidden');
             }
@@ -574,6 +597,7 @@
 
                 errorEl.classList.add('hidden');
                 document.getElementById('auth-screen').classList.add('hidden');
+                await loadDataFromSupabase();
                 setupProfileSelector();
                 document.getElementById('select-profile-screen').classList.remove('hidden');
             } catch (err) {
@@ -585,7 +609,7 @@
         function setupProfileSelector() {
             const select = document.getElementById('profile-selector');
             select.innerHTML = '<option value="">-- Выберите ваш ник --</option>';
-            let pool = currentUserRole === 'member' ? CLAN_ROLES.members : ALL_MEMBERS;
+            let pool = getAllMembers();
             pool.sort().forEach(nick => {
                 const opt = document.createElement('option');
                 opt.value = nick;
@@ -633,6 +657,7 @@
             const annActions = document.getElementById('announcement-actions');
             const missionPanel = document.getElementById('mission-panel-container');
             const officerClearCellBtn = document.getElementById('officer-clear-cell-btn');
+            const officerManagementPanel = document.getElementById('officerManagementPanel');
 
             document.getElementById('current-user-display').textContent = currentPlayer;
             annView.textContent = clanAnnouncement || 'Объявлений пока нет.';
@@ -650,6 +675,7 @@
                 annView.classList.add('hidden');
                 missionPanel.classList.remove('hidden');
                 missionPanel.classList.add('flex');
+                officerManagementPanel.classList.remove('hidden');
                 if (selectedSiegeCellId) officerClearCellBtn.classList.remove('hidden');
             } else {
                 badge.className = 'text-xs px-2.5 py-1 rounded bg-slate-900 border border-slate-800 text-slate-300';
@@ -663,6 +689,7 @@
                 annView.classList.remove('hidden');
                 missionPanel.classList.add('hidden');
                 missionPanel.classList.remove('flex');
+                officerManagementPanel.classList.add('hidden');
                 officerClearCellBtn.classList.add('hidden');
             }
         }
@@ -670,6 +697,14 @@
         function setupRealtimeSubscriptions() {
             if (!supabaseClient) return;
             
+            supabaseClient
+                .channel('public:fighters')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'fighters' }, async () => {
+                    await loadDataFromSupabase();
+                    renderApp();
+                })
+                .subscribe();
+
             supabaseClient
                 .channel('public:siege_damage')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'siege_damage' }, async () => {
@@ -694,6 +729,104 @@
                     renderApp();
                 })
                 .subscribe();
+        }
+
+        // --- УПРАВЛЕНИЕ БОЙЦАМИ ---
+        async function addFighter() {
+            if (currentUserRole !== 'officer') {
+                alert('У вас нет прав для добавления бойцов.');
+                return;
+            }
+
+            const input = document.getElementById('newFighterName');
+            const name = input.value.trim();
+            if (!name) return;
+
+            if (supabaseClient) {
+                const { error } = await supabaseClient
+                    .from('fighters')
+                    .insert([{ name: name, role: 'member' }]);
+
+                if (error) {
+                    alert('Ошибка при добавлении: ' + error.message);
+                    console.error(error);
+                } else {
+                    input.value = '';
+                    await loadDataFromSupabase();
+                    renderApp();
+                }
+            } else {
+                if (!dynamicMembers.some(m => m.name === name)) {
+                    dynamicMembers.push({ name: name, role: 'member' });
+                    input.value = '';
+                    renderApp();
+                }
+            }
+        }
+
+        function openDeleteModal(name) {
+            if (currentUserRole !== 'officer') {
+                alert('У вас нет прав для удаления бойцов.');
+                return;
+            }
+            fighterToDeleteName = name;
+            document.getElementById('modal-fighter-name').textContent = name;
+            document.getElementById('confirm-delete-modal').classList.remove('hidden');
+        }
+
+        function closeDeleteModal() {
+            fighterToDeleteName = null;
+            document.getElementById('confirm-delete-modal').classList.add('hidden');
+        }
+
+        async function executeDeleteFighter() {
+            if (!fighterToDeleteName) return;
+            const name = fighterToDeleteName;
+            closeDeleteModal();
+
+            if (supabaseClient) {
+                const { error } = await supabaseClient
+                    .from('fighters')
+                    .delete()
+                    .eq('name', name);
+
+                if (error) {
+                    alert('Ошибка при удалении');
+                    console.error(error);
+                } else {
+                    await loadDataFromSupabase();
+                    renderApp();
+                }
+            } else {
+                dynamicMembers = dynamicMembers.filter(m => m.name !== name);
+                renderApp();
+            }
+        }
+
+        async function changeFighterRole(name, newRole) {
+            if (currentUserRole !== 'officer') {
+                alert('У вас нет прав для изменения ролей.');
+                return;
+            }
+
+            if (supabaseClient) {
+                const { error } = await supabaseClient
+                    .from('fighters')
+                    .update({ role: newRole })
+                    .eq('name', name);
+
+                if (error) {
+                    alert('Ошибка при обновлении роли в базе данных');
+                    console.error(error);
+                } else {
+                    await loadDataFromSupabase();
+                    renderApp();
+                }
+            } else {
+                let found = dynamicMembers.find(m => m.name === name);
+                if (found) found.role = newRole;
+                renderApp();
+            }
         }
 
         function toggleMissionMode() {
@@ -763,7 +896,9 @@
             const container = document.getElementById('players-list');
             if (!container) return;
             container.innerHTML = '';
-            document.getElementById('players-count').textContent = ALL_MEMBERS.length;
+            
+            const allCurrentMembers = getAllMembers();
+            document.getElementById('players-count').textContent = allCurrentMembers.length;
             const searchQuery = document.getElementById('search-input').value.toLowerCase().trim();
 
             let totalClanStats = { purple: 0, blue: 0, green: 0, yellow: 0 };
@@ -779,10 +914,21 @@
                 <span class="text-yellow-400">🟡${totalClanStats.yellow}</span>
             `;
 
+            let leadersList = [];
+            let officersList = [];
+            let membersList = [];
+
+            allCurrentMembers.forEach(nick => {
+                let role = getFighterRole(nick);
+                if (role === 'leader') leadersList.push(nick);
+                else if (role === 'officer') officersList.push(nick);
+                else membersList.push(nick);
+            });
+
             const sections = [
-                { title: "👑 ЛИДЕР", list: CLAN_ROLES.leaders },
-                { title: "⚔ ОФИЦЕРЫ", list: CLAN_ROLES.officers },
-                { title: "👥 УЧАСТНИКИ", list: CLAN_ROLES.members }
+                { title: "👑 ЛИДЕРЫ", list: leadersList },
+                { title: "⚔ ОФИЦЕРЫ", list: officersList },
+                { title: "👥 УЧАСТНИКИ", list: membersList }
             ];
 
             sections.forEach(sec => {
@@ -800,6 +946,7 @@
                     const isCurrent = (nick === currentPlayer);
                     const isViewing = (nick === viewingPlayer);
                     const stats = getPlayerStats(nick);
+                    const currentNickRole = getFighterRole(nick);
 
                     const row = document.createElement('div');
                     row.className = `flex items-center justify-between p-1 rounded-lg cursor-pointer transition-colors ${
@@ -809,15 +956,37 @@
 
                     row.onclick = () => { if (currentUserRole === 'officer' || isCurrent) setViewingPlayer(nick); };
 
+                    let roleSelectHtml = '';
+                    let deleteBtnHtml = '';
+
+                    if (currentUserRole === 'officer') {
+                        roleSelectHtml = `
+                            <select onclick="event.stopPropagation();" onchange="changeFighterRole('${nick}', this.value)" class="bg-slate-900 text-slate-200 text-[10px] border border-slate-700 rounded px-1 py-0.5 focus:outline-none focus:border-amber-500">
+                                <option value="member" ${currentNickRole === 'member' ? 'selected' : ''}>Боец</option>
+                                <option value="officer" ${currentNickRole === 'officer' ? 'selected' : ''}>Офицер</option>
+                                <option value="leader" ${currentNickRole === 'leader' ? 'selected' : ''}>Лидер</option>
+                            </select>
+                        `;
+                        deleteBtnHtml = `
+                            <button onclick="event.stopPropagation(); openDeleteModal('${nick}')" class="text-[10px] bg-red-950 hover:bg-red-900 text-red-300 border border-red-800 px-1.5 py-0.5 rounded font-bold ml-1 transition-colors" title="Удалить бойца">
+                                ✕
+                            </button>
+                        `;
+                    }
+
                     row.innerHTML = `
                         <div class="flex items-center gap-1 overflow-hidden mr-1">
                             <span class="truncate ${isCurrent ? 'text-amber-400 font-bold' : 'text-slate-200'}" title="${nick}">${nick}</span>
                             ${isCurrent ? '<span class="text-[9px] bg-amber-800 text-amber-100 px-1 py-0.1 rounded shrink-0">Вы</span>' : ''}
                             ${isViewing ? '<span class="text-[9px] bg-amber-600 text-white px-1 py-0.1 rounded shrink-0">👀</span>' : ''}
                         </div>
-                        <span class="text-slate-300 font-mono tracking-tighter text-[10px] bg-slate-900 px-1 py-0.5 rounded border border-slate-800 whitespace-nowrap shrink-0">
-                            🟣${stats.purple} 🔵${stats.blue} 🟢${stats.green} 🟡${stats.yellow}
-                        </span>
+                        <div class="flex items-center gap-1 shrink-0">
+                            <span class="text-slate-300 font-mono tracking-tighter text-[10px] bg-slate-900 px-1 py-0.5 rounded border border-slate-800 whitespace-nowrap">
+                                🟣${stats.purple} 🔵${stats.blue} 🟢${stats.green} 🟡${stats.yellow}
+                            </span>
+                            ${roleSelectHtml}
+                            ${deleteBtnHtml}
+                        </div>
                     `;
                     sectionDiv.appendChild(row);
                 });
@@ -929,7 +1098,7 @@
             });
         }
 
-        // --- ЛОГИКА УРОНА ОСАДЫ ---
+        // --- УРОН ОСАДЫ ---
         function formatDamage(val) {
             if (val >= 1000000000) return (val / 1000000000).toFixed(1) + 'B';
             if (val >= 1000000) return (val / 1000000).toFixed(0) + 'M';
@@ -986,7 +1155,7 @@
 
             updateMyDamageDisplay(selectedSiegeCellId);
             updateSiegeOwnersList(selectedSiegeCellId);
-            renderSiege(); // Обновляем карту для мгновенного пересчета суммарного урона на клетке
+            renderSiege(); 
         }
 
         async function resetMyDamage() {
@@ -1069,7 +1238,6 @@
                 const hasMission = !!missionData;
                 const resName = (typeof missionData === 'object' && missionData.resource) ? missionData.resource : '';
 
-                // Считаем суммарный урон всех игроков по текущей клетке
                 let totalCellDmg = 0;
                 const cellDmgObj = siegeDamageState[cell.id];
                 if (cellDmgObj) {
@@ -1088,7 +1256,6 @@
 
                 const marker = document.createElement('div');
                 
-                // Формируем красивое отображение внутри маркера: иконка/статус + суммарный урон (если он есть)
                 let iconSymbol = '✕';
                 if (status === 3) iconSymbol = '🛡';
 
