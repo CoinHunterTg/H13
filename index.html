@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Штаб H13 - Карта Осады</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Подключаем официальную библиотеку Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        .cell-marker {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+            border: 2px solid rgba(255,255,255,0.6);
+            user-select: none;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.9), 0 0 3px rgba(0,0,0,0.8);
+        }
+        .cell-marker:hover {
+            transform: translate(-50%, -50%) scale(1.3);
+            z-index: 10;
+            border-color: #fff;
+        }
+
+        .rank-purple { background-color: rgba(147, 51, 234, 0.65); color: #fff; }
+        .rank-blue   { background-color: rgba(37, 99, 235, 0.65); color: #fff; }
+        .rank-green  { background-color: rgba(22, 163, 74, 0.65); color: #fff; }
+        .rank-yellow { background-color: rgba(202, 138, 4, 0.65); color: #fff; }
+        
+        .has-my-shelter {
+            border-color: #ffffff !important;
+            box-shadow: 0 0 12px rgba(255, 255, 255, 0.95), inset 0 0 6px rgba(255, 255, 255, 0.8) !important;
+            transform: translate(-50%, -50%) scale(1.15);
+            color: #fff !important;
+            z-index: 5;
+        }
+
+        .rank-purple.has-my-shelter { background-color: rgba(147, 51, 234, 0.98) !important; }
+        .rank-blue.has-my-shelter   { background-color: rgba(37, 99, 235, 0.98) !important; }
+        .rank-green.has-my-shelter  { background-color: rgba(22, 163, 74, 0.98) !important; }
+        .rank-yellow.has-my-shelter { background-color: rgba(202, 138, 4, 0.98) !important; }
+
+        .highlighted-shelter {
+            background-color: rgba(245, 158, 11, 0.98) !important;
+            border-color: #ffffff !important;
+            box-shadow: 0 0 14px rgba(245, 158, 11, 0.95) !important;
+            transform: translate(-50%, -50%) scale(1.2);
+            z-index: 6;
+            color: #fff !important;
+        }
+
+        .has-players {
+            border-color: rgba(255, 255, 255, 0.8) !important;
+            color: #fff !important;
+        }
+
+        .siege-marker {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            font-size: 22px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            user-select: none;
+            width: 100%;
+            height: 100%;
+            line-height: 1;
+            border-radius: 8px;
+        }
+        .siege-marker:hover {
+            transform: translate(-50%, -50%) scale(1.15);
+            z-index: 10;
+        }
+
+        .siege-neutral {
+            color: rgba(209, 213, 219, 0.7);
+            background-color: rgba(15, 23, 42, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+        }
+        .siege-p1 {
+            color: #ffffff;
+            background-color: rgba(239, 68, 68, 0.85);
+            border: 1.5px solid rgba(255, 255, 255, 0.9);
+            box-shadow: 0 0 12px rgba(239, 68, 68, 0.7);
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+            z-index: 5;
+        }
+        .siege-p2 {
+            color: #ffffff;
+            background-color: rgba(245, 158, 11, 0.85);
+            border: 1.5px solid rgba(255, 255, 255, 0.9);
+            box-shadow: 0 0 12px rgba(245, 158, 11, 0.7);
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+            z-index: 4;
+        }
+        .siege-no-attack {
+            color: #ffffff;
+            background-color: rgba(100, 116, 139, 0.9);
+            border: 1.5px solid rgba(248, 113, 113, 0.9);
+            box-shadow: 0 0 12px rgba(100, 116, 139, 0.8);
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+            z-index: 5;
+            font-size: 18px;
+        }
+        
+        #app-background {
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+        }
+    </style>
+</head>
+<body id="app-background" class="bg-slate-950 text-slate-100 min-h-screen font-sans p-2 md:p-3">
+
+    <!-- ЭТАП 1: АВТОРИЗАЦИЯ -->
+    <div id="auth-screen" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md flex items-center justify-center z-50">
+        <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl max-w-sm w-full mx-4 shadow-2xl space-y-4 text-center">
+            <h2 class="text-xl font-bold text-amber-500">🛡️ Штаб H13</h2>
+            <p class="text-xs text-slate-400">Введите ПИН-код доступа:</p>
+
+            <input type="password" id="pin-input" placeholder="ПИН-код" class="bg-slate-950 text-white text-sm border border-slate-700 rounded-lg px-3 py-2.5 w-full text-center focus:outline-none focus:border-amber-500 tracking-widest" onkeydown="if(event.key === 'Enter') handleLogin()">
+            <button onclick="handleLogin()" class="w-full bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold py-2.5 rounded-lg transition-colors">Войти</button>
+            <p id="pin-error" class="text-red-400 text-xs hidden">Неверный ПИН-код!</p>
+        </div>
+    </div>
+
+    <!-- ЭТАП 2: ВЫБОР НИКА -->
+    <div id="select-profile-screen" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md flex items-center justify-center z-50 hidden">
+        <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl max-w-sm w-full mx-4 shadow-2xl space-y-4 text-center">
+            <h2 class="text-lg font-bold text-amber-500">👤 Кто вы?</h2>
+            <p class="text-xs text-slate-400">Выберите свой боевой ник из списка:</p>
+            
+            <select id="profile-selector" class="bg-slate-950 text-white text-xs border border-slate-700 rounded-lg px-3 py-2.5 w-full focus:outline-none focus:border-amber-500">
+                <option value="">-- Выберите ваш ник --</option>
+            </select>
+
+            <button onclick="confirmProfileSelection()" class="w-full bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold py-2.5 rounded-lg transition-colors">Подтвердить и войти</button>
+            <button onclick="backToAuth()" class="w-text text-slate-400 hover:text-slate-200 text-xs underline">← Назад к вводу ПИН</button>
+        </div>
+    </div>
+
+    <!-- ОСНОВНОЙ САЙТ -->
+    <div id="main-app" class="max-w-7xl mx-auto hidden">
+        <header class="flex flex-col md:flex-row items-center justify-between gap-2 mb-3 bg-slate-900/90 backdrop-blur p-2.5 rounded-xl border border-slate-800">
+            <div class="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start flex-wrap">
+                <h1 class="text-base font-bold tracking-wide text-amber-500">🛡 Штаб H13</h1>
+                <div id="user-role-badge" class="text-xs px-2.5 py-1 rounded bg-slate-950 border border-slate-800 font-bold"></div>
+                
+                <div class="flex gap-2">
+                    <button id="tab-btn-siege" onclick="switchTab('siege')" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-600 text-white transition-colors">
+                        ⚔️ Осада
+                    </button>
+                    <button id="tab-btn-shelters" onclick="switchTab('shelters')" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800 transition-colors">
+                        ⛺ Убежища
+                    </button>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-3 bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800 w-full md:w-auto justify-between">
+                <span class="text-xs text-slate-300">Вы: <strong id="current-user-display" class="text-amber-400"></strong></span>
+                <div class="flex items-center gap-2">
+                    <button onclick="logout()" class="text-slate-400 hover:text-red-400 text-xs underline ml-2">Выйти</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- ВКЛАДКА 1: ОСАДА -->
+        <div id="tab-content-siege" class="grid grid-cols-1 lg:grid-cols-12 gap-3">
+            <div class="lg:col-span-3 flex flex-col gap-3">
+                <div class="bg-slate-900/90 backdrop-blur p-2.5 rounded-xl border border-slate-800">
+                    <div class="flex items-center justify-between mb-1.5 pb-1.5 border-b border-slate-800">
+                        <span class="text-xs font-bold text-amber-400 uppercase tracking-wider">📢 Объявление</span>
+                        <div id="announcement-actions" class="hidden gap-1.5">
+                            <button onclick="saveAnnouncement()" class="text-[10px] bg-amber-600 hover:bg-amber-500 text-white px-2 py-0.5 rounded font-medium">Сохранить</button>
+                            <button onclick="clearAnnouncement()" class="text-[10px] text-red-400 hover:text-red-300 underline">Очистить</button>
+                        </div>
+                    </div>
+                    <div id="announcement-view" class="text-xs text-slate-200 whitespace-pre-wrap min-h-[35px] p-2 bg-slate-950/60 rounded border border-slate-800/80">Объявлений пока нет.</div>
+                    <textarea id="announcement-input" class="w-full bg-slate-950 text-white text-xs border border-slate-700 rounded p-1.5 focus:outline-none focus:border-amber-500 hidden min-h-[60px]" placeholder="Введите указание..."></textarea>
+                </div>
+
+                <div class="bg-slate-900/90 backdrop-blur p-2.5 rounded-xl border border-slate-800 flex flex-col h-[280px]">
+                    <h2 class="text-xs font-semibold text-slate-200 mb-1.5 pb-1.5 border-b border-slate-800 flex items-center justify-between">
+                        <span>👥 Владельцы убежища</span>
+                        <span id="siege-selected-cell-title" class="text-amber-400 font-mono text-[11px]">Не выбрана</span>
+                    </h2>
+                    <p class="text-[10px] text-slate-400 mb-1.5">Игроки на этой клетке:</p>
+                    <div id="siege-owners-list" class="overflow-y-auto flex-1 space-y-1 text-xs pr-1">
+                        <div class="text-slate-500 text-center py-6 text-[11px]">Кликните по клетке на карте</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-6 bg-transparent p-2 flex flex-col items-center justify-center relative min-h-[520px]">
+                <div class="absolute top-2 left-2 text-[11px] text-slate-300 bg-slate-950/60 px-2 py-0.5 rounded border border-slate-800" id="siege-role-hint">Режим просмотра</div>
+                
+                <div id="mission-panel-container" class="hidden absolute top-2 right-2 flex-col gap-1 bg-amber-950/90 border border-amber-600/60 p-2 rounded-lg text-xs z-20 shadow-md">
+                    <div class="flex items-center justify-between gap-2">
+                        <span class="text-amber-300 font-medium">🎯 Миссия:</span>
+                        <button id="mission-mode-toggle-btn" onclick="toggleMissionMode()" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-bold transition-colors">Выкл</button>
+                    </div>
+                    <div id="mission-resource-input-wrap" class="hidden mt-1">
+                        <input type="text" id="mission-resource-input" oninput="updateMissionResource()" placeholder="Ресурс (напр. Трава)..." class="w-full bg-slate-950 text-amber-200 text-[11px] border border-amber-600/50 rounded px-2 py-1 focus:outline-none">
+                    </div>
+                </div>
+
+                <div id="siege-map-container" class="relative w-full max-w-[480px]" style="aspect-ratio: 594 / 865;">
+                    <img src="map.png" class="absolute inset-0 w-full h-full object-contain rounded-lg shadow-2xl" alt="Карта" onerror="this.style.display='none'">
+                    <div id="siege-cells-layer" class="absolute inset-0"></div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-3 bg-slate-900/90 backdrop-blur p-2.5 rounded-xl border border-slate-800 flex flex-col h-[565px]">
+                <h2 class="text-xs font-semibold text-slate-200 mb-1.5 pb-1.5 border-b border-slate-800">⚡ Приоритеты осады</h2>
+                
+                <div class="overflow-y-auto flex-1 space-y-2.5 text-xs pr-1">
+                    <div>
+                        <div class="text-[10px] font-bold text-red-400 uppercase tracking-wider mb-1">🔥 1-я очередь</div>
+                        <div id="siege-p1-list" class="space-y-1"><span class="text-slate-500 text-[11px]">Нет целей</span></div>
+                    </div>
+
+                    <div class="pt-1.5 border-t border-slate-800">
+                        <div class="text-[10px] font-bold text-amber-400 uppercase tracking-wider mb-1">⚡ 2-я очередь</div>
+                        <div id="siege-p2-list" class="space-y-1"><span class="text-slate-500 text-[11px]">Нет целей</span></div>
+                    </div>
+
+                    <div class="pt-1.5 border-t border-slate-800">
+                        <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">🛡️ Не атаковать</div>
+                        <div id="siege-no-attack-list" class="space-y-1"><span class="text-slate-500 text-[11px]">Нет целей</span></div>
+                    </div>
+
+                    <div class="pt-2 border-t border-amber-600/40">
+                        <div class="text-[10px] font-bold text-amber-400 uppercase tracking-wider mb-1 flex items-center justify-between">
+                            <span>🎯 Миссия (фарм)</span>
+                        </div>
+                        <div id="siege-mission-display-list" class="space-y-1">
+                            <span class="text-slate-500 text-[11px]">Миссия не задана</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ВКЛАДКА 2: УБЕЖИЩА -->
+        <div id="tab-content-shelters" class="grid grid-cols-1 lg:grid-cols-12 gap-3 hidden">
+            <div class="lg:col-span-4 bg-slate-900/90 backdrop-blur p-2.5 rounded-xl border border-slate-800 flex flex-col h-[565px]">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-1.5 mb-1.5 pb-1.5 border-b border-slate-800">
+                    <div class="flex items-center gap-2">
+                        <h2 class="text-xs font-semibold text-slate-200">👥 Состав (<span id="players-count">0</span>)</h2>
+                        <div id="total-clan-stats" class="font-mono font-bold tracking-tight text-[11px] ml-1">🟣0 🔵0 🟢0 🟡0</div>
+                    </div>
+                    <div class="w-full sm:w-auto">
+                        <input type="text" id="search-input" oninput="renderPlayersList()" placeholder="🔍 Поиск..." class="bg-slate-950 text-white text-xs border border-slate-800 rounded px-2 py-0.5 focus:outline-none focus:border-amber-500 w-full sm:w-28">
+                    </div>
+                </div>
+                
+                <div id="players-list" class="overflow-y-auto flex-1 pr-1 space-y-1.5 text-xs"></div>
+
+                <div class="mt-1.5 pt-1.5 border-t border-slate-800 text-[10px] text-slate-400 flex flex-col gap-1.5">
+                    <div class="flex justify-between items-center">
+                        <span id="permissions-hint">Обычный режим</span>
+                        <button onclick="resetData()" id="reset-btn" class="text-red-400 hover:text-red-300 underline hidden">Сбросить всё</button>
+                    </div>
+                    <div class="flex items-center justify-between bg-slate-950 p-1.5 rounded border border-slate-800">
+                        <span class="text-slate-300">🖼️ Фон:</span>
+                        <input type="file" id="bg-file-input" accept="image/*" onchange="changeBackground(event)" class="text-[10px] text-slate-400 file:mr-2 file:py-0.5 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-amber-600 file:text-white hover:file:bg-amber-500 cursor-pointer">
+                    </div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-8 bg-transparent p-2 flex flex-col items-center justify-center relative min-h-[520px]">
+                <div id="viewing-indicator" class="absolute top-2 left-4 right-4 bg-amber-950/90 border border-amber-600/60 px-3 py-1 rounded-lg text-xs text-amber-200 flex justify-between items-center z-20 hidden shadow-lg">
+                    <span>👀 Убежища игрока: <strong id="viewing-nick-name" class="text-white"></strong></span>
+                    <button onclick="clearViewingPlayer()" class="text-amber-400 hover:text-white text-[10px] underline font-medium">Сбросить</button>
+                </div>
+
+                <div id="map-container" class="relative w-full max-w-[490px]" style="aspect-ratio: 594 / 865;">
+                    <img id="map-img" src="map.png" class="absolute inset-0 w-full h-full object-contain rounded-lg shadow-2xl" alt="Карта" onerror="onMapError()">
+                    <div id="placeholder" class="absolute inset-0 flex flex-col items-center justify-center text-red-400 bg-slate-950/95 rounded-lg hidden p-4 text-center">
+                        <p class="font-semibold text-sm">Картинка map.png не найдена!</p>
+                    </div>
+                    <div id="cells-layer" class="absolute inset-0"></div>
+                </div>
+                
+                <div class="mt-2.5">
+                    <button onclick="toggleAllForCurrentPlayer()" class="bg-amber-600 hover:bg-amber-500 text-white text-xs px-3 py-1.5 rounded-lg font-medium transition-colors shadow">
+                        ⚡ Отметить все
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // НАСТРОЙКА SUPABASE (ЗАМЕНИ НА СВОИ ДАННЫЕ)
+        // ==========================================
+        const SUPABASE_URL = 'https://odlxxtzuchpaykttycgi.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_Qo59JT3EGIunTT-XJDvfxw_34sKna-7';
+        
+        // Инициализация клиента Supabase (если ключи не заполнены, пока будет работать на локальной памяти, чтобы ничего не ломалось)
+        let supabaseClient = null;
+        if (SUPABASE_URL !== 'ВСТАВЬ_СЮДА_URL_ПРОЕКТА' && SUPABASE_ANON_KEY !== 'ВСТАВЬ_СЮДА_ANON_КЛЮЧ') {
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        }
+
+        const CLAN_ROLES = {
+            leaders: ["satoH13"],
+            officers: ["Gargoyle_D", "TwisSP"],
+            members: [
+                "CryptoVSB", "maskim_gurskii", "Burhuy", "psychxelbr", 
+                "Yurii_SINK", "Donislife", "Bizmat", "Voucher12356", 
+                "seg_ami", "cac_va", "den0311", "amina_yaa", 
+                "Darkbeast1991", "Charlie881936", "olololosh", "OdysseysShake"
+            ]
+        };
+
+        const ALL_MEMBERS = [...CLAN_ROLES.leaders, ...CLAN_ROLES.officers, ...CLAN_ROLES.members];
+
+        const CELLS_DATA = [
+            { id: 1, key: "P1", name: "Лас Вегас", color: "purple", x: 56.9, y: 46.8, size: 8.5 },
+            { id: 2, key: "P2", name: "Химический завод", color: "purple", x: 64.1, y: 23.7, size: 8.5 },
+            { id: 3, key: "B1", name: "АЭС", color: "blue", x: 50.0, y: 8.9, size: 8.5 },
+            { id: 4, key: "B2", name: "Военный завод", color: "blue", x: 64.1, y: 9.0, size: 8.2 },
+            { id: 5, key: "B3", name: "Титановый завод", color: "blue", x: 42.6, y: 17.0, size: 8.5 },
+            { id: 6, key: "B4", name: "Метро", color: "blue", x: 50.2, y: 24.4, size: 8.5 },
+            { id: 7, key: "B5", name: "Контейнеры", color: "blue", x: 79.0, y: 24.2, size: 8.5 },
+            { id: 8, key: "B6", name: "Кладбище", color: "blue", x: 49.7, y: 39.3, size: 8.2 },
+            { id: 9, key: "B7", name: "Радио вышка", color: "blue", x: 21.0, y: 39.5, size: 8.5 },
+            { id: 10, key: "B8", name: "Западный маяк", color: "blue", x: 86.2, y: 47.3, size: 8.5 },
+            { id: 11, key: "B9", name: "Пиратская бухта", color: "blue", x: 78.3, y: 39.4, size: 8.5 },
+            { id: 12, key: "B10", name: "Шахты", color: "blue", x: 85.9, y: 31.7, size: 8.5 },
+            { id: 13, key: "B11", name: "Заброшенная теплица", color: "blue", x: 42.3, y: 46.7, size: 8.5 },
+            { id: 14, key: "B12", name: "Порт", color: "blue", x: 64.6, y: 39.0, size: 8.5 },
+            { id: 15, key: "B13", name: "Очистительный завод", color: "blue", x: 64.5, y: 54.5, size: 8.5 },
+            { id: 16, key: "B14", name: "Вертолетная площадка", color: "blue", x: 28.5, y: 46.8, size: 8.2 },
+            { id: 17, key: "B15", name: "Покинутый пропускной пункт", color: "blue", x: 35.4, y: 54.2, size: 8.5 },
+            { id: 18, key: "G1", name: "Ограбленный грузовик", color: "green", x: 71.7, y: 61.5, size: 8.2 },
+            { id: 19, key: "G2", name: "Стадион", color: "green", x: 20.9, y: 54.3, size: 8.2 },
+            { id: 20, key: "G3", name: "Болото", color: "green", x: 42.8, y: 62.0, size: 8.5 },
+            { id: 21, key: "G4", name: "Грязное поле", color: "green", x: 50.0, y: 69.8, size: 8.5 },
+            { id: 22, key: "G5", name: "Блокпост Чарли", color: "green", x: 64.5, y: 69.7, size: 8.8 },
+            { id: 23, key: "G6", name: "Заправка", color: "green", x: 78.6, y: 69.8, size: 8.8 },
+            { id: 24, key: "G7", name: "Разбитая лавка", color: "green", x: 28.3, y: 61.9, size: 8.5 },
+            { id: 25, key: "G8", name: "SOS Убежище", color: "green", x: 20.9, y: 69.6, size: 8.5 },
+            { id: 26, key: "G9", name: "Разрушеный дом", color: "green", x: 28.5, y: 76.9, size: 8.5 },
+            { id: 27, key: "Y1", name: "Стоянка бульдозера", color: "yellow", x: 42.6, y: 77.2, size: 8.5 },
+            { id: 28, key: "Y2", name: "Хранилище топлива", color: "yellow", x: 57.2, y: 77.2, size: 8.5 },
+            { id: 29, key: "Y3", name: "Цирк", color: "yellow", x: 35.7, y: 84.7, size: 8.2 },
+            { id: 30, key: "Y4", name: "Поле со стогами", color: "yellow", x: 78.7, y: 84.7, size: 8.5 },
+            { id: 31, key: "Y5", name: "Ферма", color: "yellow", x: 64.3, y: 84.9, size: 8.5 },
+            { id: 32, key: "Y6", name: "Зона 51", color: "yellow", x: 13.5, y: 76.9, size: 8.5 },
+            { id: 33, key: "Y7", name: "Место выживших", color: "yellow", x: 57.2, y: 92.3, size: 8.5 }
+        ];
+
+        let sheltersState = JSON.parse(localStorage.getItem('proto_shelters_v17') || '{}');
+        let siegeState = JSON.parse(localStorage.getItem('proto_siege_v3') || '{}');
+        let siegeMissionState = JSON.parse(localStorage.getItem('proto_siege_mission_v2') || '{}');
+        let clanAnnouncement = localStorage.getItem('proto_announcement_v1') || 'Привет бойцам! Сверяем точки по плану.';
+        let customBgUrl = localStorage.getItem('proto_custom_bg_v1') || '';
+        
+        let currentPlayer = localStorage.getItem('proto_player_name') || '';
+        let currentUserRole = localStorage.getItem('proto_auth_role') || '';
+        let viewingPlayer = '';
+        let selectedSiegeCellId = null;
+        let isMissionEditingMode = false;
+
+        function applyCustomBackground() {
+            if (customBgUrl) {
+                document.getElementById('app-background').style.backgroundImage = `url('${customBgUrl}')`;
+            }
+        }
+
+        function changeBackground(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                customBgUrl = e.target.result;
+                localStorage.setItem('proto_custom_bg_v1', customBgUrl);
+                applyCustomBackground();
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function switchTab(tabName) {
+            const sheltersTab = document.getElementById('tab-content-shelters');
+            const siegeTab = document.getElementById('tab-content-siege');
+            const btnShelters = document.getElementById('tab-btn-shelters');
+            const btnSiege = document.getElementById('tab-btn-siege');
+
+            if (tabName === 'shelters') {
+                sheltersTab.classList.remove('hidden');
+                siegeTab.classList.add('hidden');
+                btnShelters.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-600 text-white transition-colors';
+                btnSiege.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800 transition-colors';
+            } else {
+                sheltersTab.classList.add('hidden');
+                siegeTab.classList.remove('hidden');
+                btnSiege.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-600 text-white transition-colors';
+                btnShelters.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800 transition-colors';
+                renderSiege();
+            }
+        }
+
+        function checkAuthOnLoad() {
+            applyCustomBackground();
+            if (currentUserRole && currentPlayer) {
+                document.getElementById('auth-screen').classList.add('hidden');
+                document.getElementById('select-profile-screen').classList.add('hidden');
+                document.getElementById('main-app').classList.remove('hidden');
+                setupRoleUI();
+                renderApp();
+            } else if (currentUserRole) {
+                document.getElementById('auth-screen').classList.add('hidden');
+                setupProfileSelector();
+                document.getElementById('select-profile-screen').classList.remove('hidden');
+            }
+        }
+
+        function handleLogin() {
+            const pin = document.getElementById('pin-input').value.trim();
+            const errorEl = document.getElementById('pin-error');
+
+            if (pin === '1111') currentUserRole = 'member';
+            else if (pin === '1313') currentUserRole = 'officer';
+            else { errorEl.classList.remove('hidden'); return; }
+
+            localStorage.setItem('proto_auth_role', currentUserRole);
+            errorEl.classList.add('hidden');
+            document.getElementById('auth-screen').classList.add('hidden');
+            setupProfileSelector();
+            document.getElementById('select-profile-screen').classList.remove('hidden');
+        }
+
+        function setupProfileSelector() {
+            const select = document.getElementById('profile-selector');
+            select.innerHTML = '<option value="">-- Выберите ваш ник --</option>';
+            let pool = currentUserRole === 'member' ? CLAN_ROLES.members : ALL_MEMBERS;
+            pool.sort().forEach(nick => {
+                const opt = document.createElement('option');
+                opt.value = nick;
+                opt.textContent = nick;
+                if (nick === currentPlayer) opt.selected = true;
+                select.appendChild(opt);
+            });
+        }
+
+        function confirmProfileSelection() {
+            const select = document.getElementById('profile-selector');
+            if (!select.value) { alert('⚠️ Выберите ник!'); return; }
+            currentPlayer = select.value;
+            localStorage.setItem('proto_player_name', currentPlayer);
+            document.getElementById('select-profile-screen').classList.add('hidden');
+            document.getElementById('main-app').classList.remove('hidden');
+            setupRoleUI();
+            renderApp();
+        }
+
+        function backToAuth() {
+            document.getElementById('select-profile-screen').classList.add('hidden');
+            document.getElementById('auth-screen').classList.remove('hidden');
+        }
+
+        function logout() {
+            localStorage.removeItem('proto_auth_role');
+            localStorage.removeItem('proto_player_name');
+            currentUserRole = ''; currentPlayer = ''; viewingPlayer = '';
+            document.getElementById('main-app').classList.add('hidden');
+            document.getElementById('auth-screen').classList.remove('hidden');
+            document.getElementById('pin-input').value = '';
+        }
+
+        function setupRoleUI() {
+            const badge = document.getElementById('user-role-badge');
+            const resetBtn = document.getElementById('reset-btn');
+            const hint = document.getElementById('permissions-hint');
+            const siegeHint = document.getElementById('siege-role-hint');
+            const annView = document.getElementById('announcement-view');
+            const annInput = document.getElementById('announcement-input');
+            const annActions = document.getElementById('announcement-actions');
+            const missionPanel = document.getElementById('mission-panel-container');
+
+            document.getElementById('current-user-display').textContent = currentPlayer;
+
+            annView.textContent = clanAnnouncement || 'Объявлений пока нет.';
+            annInput.value = clanAnnouncement;
+
+            if (currentUserRole === 'officer') {
+                badge.className = 'text-xs px-2.5 py-1 rounded bg-amber-950/80 border border-amber-600 text-amber-300 font-bold';
+                badge.textContent = '⚡ Офицер';
+                resetBtn.classList.remove('hidden');
+                hint.textContent = 'Офицер: клик по нику — просмотр убежищ';
+                siegeHint.textContent = '⚡ Офицер: клик по клетке меняет приоритет';
+                annActions.classList.remove('hidden');
+                annActions.classList.add('flex');
+                annInput.classList.remove('hidden');
+                annView.classList.add('hidden');
+                missionPanel.classList.remove('hidden');
+                missionPanel.classList.add('flex');
+            } else {
+                badge.className = 'text-xs px-2.5 py-1 rounded bg-slate-900 border border-slate-800 text-slate-300';
+                badge.textContent = '🔒 Участник';
+                resetBtn.classList.add('hidden');
+                hint.textContent = 'Участник: свои точки';
+                siegeHint.textContent = '🔒 Тактика руководства';
+                annActions.classList.add('hidden');
+                annActions.classList.remove('flex');
+                annInput.classList.add('hidden');
+                annView.classList.remove('hidden');
+                missionPanel.classList.add('hidden');
+                missionPanel.classList.remove('flex');
+            }
+        }
+
+        function toggleMissionMode() {
+            if (currentUserRole !== 'officer') return;
+            isMissionEditingMode = !isMissionEditingMode;
+            const btn = document.getElementById('mission-mode-toggle-btn');
+            const resWrap = document.getElementById('mission-resource-input-wrap');
+            if (isMissionEditingMode) {
+                btn.className = 'px-2 py-0.5 rounded bg-amber-600 text-white font-bold transition-colors shadow';
+                btn.textContent = 'ВКЛ';
+                resWrap.classList.remove('hidden');
+            } else {
+                btn.className = 'px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-bold transition-colors';
+                btn.textContent = 'Выкл';
+                resWrap.classList.add('hidden');
+            }
+        }
+
+        function updateMissionResource() {
+            if (!selectedSiegeCellId || !siegeMissionState[selectedSiegeCellId]) return;
+            const val = document.getElementById('mission-resource-input').value;
+            if (typeof siegeMissionState[selectedSiegeCellId] === 'object') {
+                siegeMissionState[selectedSiegeCellId].resource = val;
+            } else {
+                siegeMissionState[selectedSiegeCellId] = { resource: val };
+            }
+            localStorage.setItem('proto_siege_mission_v2', JSON.stringify(siegeMissionState));
+            renderSiege();
+        }
+
+        function saveAnnouncement() {
+            if (currentUserRole !== 'officer') return;
+            clanAnnouncement = document.getElementById('announcement-input').value.trim();
+            localStorage.setItem('proto_announcement_v1', clanAnnouncement);
+            document.getElementById('announcement-view').textContent = clanAnnouncement || 'Объявлений пока нет.';
+            alert('✅ Объявление обновлено!');
+        }
+
+        function clearAnnouncement() {
+            if (currentUserRole !== 'officer') return;
+            document.getElementById('announcement-input').value = '';
+            saveAnnouncement();
+        }
+
+        function getPlayerStats(nick) {
+            let stats = { purple: 0, blue: 0, green: 0, yellow: 0 };
+            for (const [cellId, players] of Object.entries(sheltersState)) {
+                if (players.includes(nick)) {
+                    const cell = CELLS_DATA.find(c => c.id == cellId);
+                    if (cell && stats[cell.color] !== undefined) stats[cell.color]++;
+                }
+            }
+            return stats;
+        }
+
+        function renderPlayersList() {
+            const container = document.getElementById('players-list');
+            container.innerHTML = '';
+            document.getElementById('players-count').textContent = ALL_MEMBERS.length;
+            const searchQuery = document.getElementById('search-input').value.toLowerCase().trim();
+
+            let totalClanStats = { purple: 0, blue: 0, green: 0, yellow: 0 };
+            for (const [cellId, players] of Object.entries(sheltersState)) {
+                const cell = CELLS_DATA.find(c => c.id == cellId);
+                if (cell && totalClanStats[cell.color] !== undefined) totalClanStats[cell.color] += players.length;
+            }
+
+            document.getElementById('total-clan-stats').innerHTML = `
+                <span class="text-purple-400 mr-1">🟣${totalClanStats.purple}</span>
+                <span class="text-blue-400 mr-1">🔵${totalClanStats.blue}</span>
+                <span class="text-green-400 mr-1">🟢${totalClanStats.green}</span>
+                <span class="text-yellow-400">🟡${totalClanStats.yellow}</span>
+            `;
+
+            const sections = [
+                { title: "👑 ЛИДЕР", list: CLAN_ROLES.leaders },
+                { title: "⚔ ОФИЦЕРЫ", list: CLAN_ROLES.officers },
+                { title: "👥 УЧАСТНИКИ", list: CLAN_ROLES.members }
+            ];
+
+            sections.forEach(sec => {
+                const filteredList = sec.list.filter(nick => nick.toLowerCase().includes(searchQuery));
+                if (filteredList.length === 0) return;
+
+                const sectionDiv = document.createElement('div');
+                sectionDiv.className = 'space-y-1';
+                const header = document.createElement('div');
+                header.className = 'text-[9px] font-bold text-slate-400 tracking-wider uppercase mb-1 mt-1';
+                header.textContent = sec.title;
+                sectionDiv.appendChild(header);
+
+                filteredList.forEach(nick => {
+                    const isCurrent = (nick === currentPlayer);
+                    const isViewing = (nick === viewingPlayer);
+                    const stats = getPlayerStats(nick);
+
+                    const row = document.createElement('div');
+                    row.className = `flex items-center justify-between p-1 rounded-lg cursor-pointer transition-colors ${
+                        isViewing ? 'bg-amber-950/60 border border-amber-500/70' :
+                        isCurrent ? 'bg-amber-950/30 border border-amber-600/40' : 'bg-slate-950/60 hover:bg-slate-800/50'
+                    }`;
+
+                    row.onclick = () => { if (currentUserRole === 'officer' || isCurrent) setViewingPlayer(nick); };
+
+                    row.innerHTML = `
+                        <div class="flex items-center gap-1 overflow-hidden mr-1">
+                            <span class="truncate ${isCurrent ? 'text-amber-400 font-bold' : 'text-slate-200'}" title="${nick}">${nick}</span>
+                            ${isCurrent ? '<span class="text-[9px] bg-amber-800 text-amber-100 px-1 py-0.1 rounded shrink-0">Вы</span>' : ''}
+                            ${isViewing ? '<span class="text-[9px] bg-amber-600 text-white px-1 py-0.1 rounded shrink-0">👀</span>' : ''}
+                        </div>
+                        <span class="text-slate-300 font-mono tracking-tighter text-[10px] bg-slate-900 px-1 py-0.5 rounded border border-slate-800 whitespace-nowrap shrink-0">
+                            🟣${stats.purple} 🔵${stats.blue} 🟢${stats.green} 🟡${stats.yellow}
+                        </span>
+                    `;
+                    sectionDiv.appendChild(row);
+                });
+                container.appendChild(sectionDiv);
+            });
+        }
+
+        function setViewingPlayer(nick) {
+            if (viewingPlayer === nick) clearViewingPlayer();
+            else {
+                viewingPlayer = nick;
+                document.getElementById('viewing-nick-name').textContent = nick;
+                document.getElementById('viewing-indicator').classList.remove('hidden');
+                renderCells();
+                renderPlayersList();
+            }
+        }
+
+        function clearViewingPlayer() {
+            viewingPlayer = '';
+            document.getElementById('viewing-indicator').classList.add('hidden');
+            renderCells();
+            renderPlayersList();
+        }
+
+        function toggleAllForCurrentPlayer() {
+            if (!currentPlayer) { alert('⚠ Выберите ник!'); return; }
+            let hasAll = CELLS_DATA.every(c => (sheltersState[c.id] || []).includes(currentPlayer));
+            CELLS_DATA.forEach(cell => {
+                if (!sheltersState[cell.id]) sheltersState[cell.id] = [];
+                if (hasAll) {
+                    sheltersState[cell.id] = sheltersState[cell.id].filter(p => p !== currentPlayer);
+                    if (sheltersState[cell.id].length === 0) delete sheltersState[cell.id];
+                } else if (!sheltersState[cell.id].includes(currentPlayer)) {
+                    sheltersState[cell.id].push(currentPlayer);
+                }
+            });
+            localStorage.setItem('proto_shelters_v17', JSON.stringify(sheltersState));
+            renderCells();
+            renderPlayersList();
+        }
+
+        function onMapError() {
+            document.getElementById('map-img').style.display = 'none';
+            document.getElementById('placeholder').classList.remove('hidden');
+        }
+
+        function renderCells() {
+            const layer = document.getElementById('cells-layer');
+            layer.innerHTML = '';
+            CELLS_DATA.forEach(cell => {
+                const marker = document.createElement('div');
+                marker.style.left = `${cell.x}%`;
+                marker.style.top = `${cell.y}%`;
+                marker.style.width = `${cell.size}%`;
+                marker.style.height = `${cell.size}%`;
+
+                const playersOnCell = sheltersState[cell.id] || [];
+                const totalCount = playersOnCell.length;
+                const hasMyShelter = currentPlayer && playersOnCell.includes(currentPlayer);
+                const isHighlighted = viewingPlayer && playersOnCell.includes(viewingPlayer);
+
+                if (isHighlighted) marker.className = 'cell-marker highlighted-shelter';
+                else if (hasMyShelter) marker.className = `cell-marker rank-${cell.color} has-my-shelter`;
+                else if (totalCount > 0) marker.className = `cell-marker rank-${cell.color} has-players`;
+                else marker.className = `cell-marker rank-${cell.color}`;
+
+                marker.innerText = totalCount > 0 ? totalCount : '';
+                marker.title = `${cell.name}` + (totalCount > 0 ? `\nУбежищ (${totalCount}): ${playersOnCell.join(', ')}` : ' (Свободно)');
+
+                marker.onclick = (e) => {
+                    e.stopPropagation();
+                    if (!currentPlayer) return;
+                    if (viewingPlayer && viewingPlayer !== currentPlayer && currentUserRole !== 'officer') {
+                        alert('⛔ Запрещено редактировать чужие точки!');
+                        return;
+                    }
+                    if (!sheltersState[cell.id]) sheltersState[cell.id] = [];
+                    const idx = sheltersState[cell.id].indexOf(currentPlayer);
+                    if (idx > -1) {
+                        sheltersState[cell.id].splice(idx, 1);
+                        if (sheltersState[cell.id].length === 0) delete sheltersState[cell.id];
+                    } else {
+                        sheltersState[cell.id].push(currentPlayer);
+                    }
+                    localStorage.setItem('proto_shelters_v17', JSON.stringify(sheltersState));
+                    renderCells();
+                    renderPlayersList();
+                };
+                layer.appendChild(marker);
+            });
+        }
+
+        function renderSiege() {
+            const layer = document.getElementById('siege-cells-layer');
+            layer.innerHTML = '';
+            const p1Container = document.getElementById('siege-p1-list');
+            const p2Container = document.getElementById('siege-p2-list');
+            const noAttackContainer = document.getElementById('siege-no-attack-list');
+            const missionListContainer = document.getElementById('siege-mission-display-list');
+            
+            p1Container.innerHTML = '';
+            p2Container.innerHTML = '';
+            noAttackContainer.innerHTML = '';
+            missionListContainer.innerHTML = '';
+
+            let p1Count = 0, p2Count = 0, noAttackCount = 0, missionCount = 0;
+
+            CELLS_DATA.forEach(cell => {
+                const status = siegeState[cell.id] || 0;
+                const missionData = siegeMissionState[cell.id];
+                const hasMission = !!missionData;
+                const resName = (typeof missionData === 'object' && missionData.resource) ? missionData.resource : '';
+
+                const wrapper = document.createElement('div');
+                wrapper.style.position = 'absolute';
+                wrapper.style.left = `${cell.x}%`;
+                wrapper.style.top = `${cell.y}%`;
+                wrapper.style.width = `${cell.size}%`;
+                wrapper.style.height = `${cell.size}%`;
+                wrapper.style.transform = 'translate(-50%, -50%)';
+
+                const marker = document.createElement('div');
+                if (status === 1) {
+                    marker.className = 'siege-marker siege-p1';
+                    marker.innerHTML = '✕';
+                } else if (status === 2) {
+                    marker.className = 'siege-marker siege-p2';
+                    marker.innerHTML = '✕';
+                } else if (status === 3) {
+                    marker.className = 'siege-marker siege-no-attack';
+                    marker.innerHTML = '🛡';
+                } else {
+                    marker.className = 'siege-marker siege-neutral';
+                    marker.innerHTML = '✕';
+                }
+                marker.title = `${cell.name}`;
+
+                if (hasMission) {
+                    const missionBadge = document.createElement('div');
+                    missionBadge.className = 'absolute -top-2 -right-2 bg-amber-500 text-slate-950 rounded-md px-1 py-0.5 flex items-center gap-0.5 text-[9px] font-black shadow-md border border-white z-20 pointer-events-none whitespace-nowrap';
+                    missionBadge.innerHTML = `🎯 ${resName}`;
+                    wrapper.appendChild(missionBadge);
+                }
+
+                marker.onclick = () => {
+                    selectSiegeCell(cell.id);
+                    if (currentUserRole === 'officer') {
+                        if (isMissionEditingMode) {
+                            if (siegeMissionState[cell.id]) {
+                                delete siegeMissionState[cell.id];
+                            } else {
+                                siegeMissionState[cell.id] = { resource: '' };
+                            }
+                            localStorage.setItem('proto_siege_mission_v2', JSON.stringify(siegeMissionState));
+                            renderSiege();
+                        } else {
+                            let currentStatus = siegeState[cell.id] || 0;
+                            let nextStatus = (currentStatus + 1) % 4;
+                            if (nextStatus === 0) delete siegeState[cell.id];
+                            else siegeState[cell.id] = nextStatus;
+                            localStorage.setItem('proto_siege_v3', JSON.stringify(siegeState));
+                            renderSiege();
+                        }
+                    }
+                };
+
+                wrapper.appendChild(marker);
+                layer.appendChild(wrapper);
+
+                if (status >= 1 && status <= 3) {
+                    const item = document.createElement('div');
+                    item.className = `flex items-center justify-between p-1 rounded-lg cursor-pointer border ${
+                        selectedSiegeCellId === cell.id ? 'bg-amber-950/60 border-amber-500' : 'bg-slate-950/60 border-slate-800 hover:bg-slate-800/50'
+                    }`;
+                    item.onclick = () => selectSiegeCell(cell.id);
+                    item.innerHTML = `
+                        <div class="flex items-center gap-1.5 overflow-hidden">
+                            <span class="text-slate-200 truncate text-[11px]">${cell.name}</span>
+                        </div>
+                        <span class="text-[9px] px-1 py-0.5 rounded ${cell.color === 'purple' ? 'bg-purple-950 text-purple-300' : cell.color === 'blue' ? 'bg-blue-950 text-blue-300' : cell.color === 'green' ? 'bg-green-950 text-green-300' : 'bg-yellow-950 text-yellow-300'}">${cell.color}</span>
+                    `;
+                    if (status === 1) { p1Container.appendChild(item); p1Count++; }
+                    else if (status === 2) { p2Container.appendChild(item); p2Count++; }
+                    else if (status === 3) { noAttackContainer.appendChild(item); noAttackCount++; }
+                }
+
+                if (hasMission) {
+                    missionCount++;
+                    const mItem = document.createElement('div');
+                    mItem.className = `flex items-center justify-between p-1 rounded-lg cursor-pointer border ${
+                        selectedSiegeCellId === cell.id ? 'bg-amber-950/60 border-amber-500' : 'bg-slate-950/60 border-amber-600/30 hover:bg-slate-800/50'
+                    }`;
+                    mItem.onclick = () => selectSiegeCell(cell.id);
+                    mItem.innerHTML = `
+                        <div class="flex items-center gap-1.5 overflow-hidden">
+                            <span class="text-amber-300 font-bold">🎯</span>
+                            <span class="text-white truncate text-[11px]">${cell.name} ${resName ? '('+resName+')' : ''}</span>
+                        </div>
+                    `;
+                    missionListContainer.appendChild(mItem);
+                }
+            });
+
+            if (p1Count === 0) p1Container.innerHTML = '<span class="text-slate-500 text-[11px]">Нет целей</span>';
+            if (p2Count === 0) p2Container.innerHTML = '<span class="text-slate-500 text-[11px]">Нет целей</span>';
+            if (noAttackCount === 0) noAttackContainer.innerHTML = '<span class="text-slate-500 text-[11px]">Нет целей</span>';
+            if (missionCount === 0) missionListContainer.innerHTML = '<span class="text-slate-500 text-[11px]">Миссия не задана</span>';
+
+            if (selectedSiegeCellId) updateSiegeOwnersList(selectedSiegeCellId);
+        }
+
+        function selectSiegeCell(cellId) {
+            selectedSiegeCellId = cellId;
+            updateSiegeOwnersList(cellId);
+            const missionData = siegeMissionState[cellId];
+            const resInput = document.getElementById('mission-resource-input');
+            if (resInput && missionData) {
+                resInput.value = (typeof missionData === 'object' && missionData.resource) ? missionData.resource : '';
+            }
+            renderSiege();
+        }
+
+        function updateSiegeOwnersList(cellId) {
+            const cell = CELLS_DATA.find(c => c.id == cellId);
+            const titleEl = document.getElementById('siege-selected-cell-title');
+            const listEl = document.getElementById('siege-owners-list');
+            if (!cell) return;
+            titleEl.textContent = cell.name;
+            const owners = sheltersState[cellId] || [];
+            listEl.innerHTML = '';
+            if (owners.length === 0) {
+                listEl.innerHTML = '<div class="text-slate-500 text-center py-6 text-[11px]">Ни у кого не отмечена эта точка</div>';
+                return;
+            }
+            owners.forEach(nick => {
+                const row = document.createElement('div');
+                row.className = 'flex items-center justify-between p-1 rounded-lg bg-slate-950/60 border border-slate-800 text-slate-200 text-[11px]';
+                row.innerHTML = `<span class="font-medium">${nick}</span>`;
+                listEl.appendChild(row);
+            });
+        }
+
+        function renderApp() {
+            renderPlayersList();
+            renderCells();
+        }
+
+        window.onload = () => checkAuthOnLoad();
+
+        function resetData() {
+            if (currentUserRole !== 'officer') return;
+            if (confirm('⚠ ВНИМАНИЕ! Это действие очистит ВСЕ отметки убежищ. Вы уверены?')) {
+                sheltersState = {};
+                localStorage.removeItem('proto_shelters_v17');
+                clearViewingPlayer();
+                renderCells();
+                renderPlayersList();
+            }
+        }
+    </script>
+</body>
+</html>
