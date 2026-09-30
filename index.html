@@ -36,17 +36,13 @@
         .rank-yellow { background-color: rgba(202, 138, 4, 0.65); color: #fff; }
         
         .has-my-shelter {
+            background-color: rgba(239, 68, 68, 0.95) !important;
             border-color: #ffffff !important;
-            box-shadow: 0 0 12px rgba(255, 255, 255, 0.95), inset 0 0 6px rgba(255, 255, 255, 0.8) !important;
+            box-shadow: 0 0 14px rgba(239, 68, 68, 0.95), inset 0 0 6px rgba(255, 255, 255, 0.9) !important;
             transform: translate(-50%, -50%) scale(1.15);
             color: #fff !important;
             z-index: 5;
         }
-
-        .rank-purple.has-my-shelter { background-color: rgba(147, 51, 234, 0.98) !important; }
-        .rank-blue.has-my-shelter   { background-color: rgba(37, 99, 235, 0.98) !important; }
-        .rank-green.has-my-shelter  { background-color: rgba(22, 163, 74, 0.98) !important; }
-        .rank-yellow.has-my-shelter { background-color: rgba(202, 138, 4, 0.98) !important; }
 
         .highlighted-shelter {
             background-color: rgba(245, 158, 11, 0.98) !important;
@@ -207,35 +203,36 @@
                     
                     <div id="my-damage-panel" class="mb-2 p-2 bg-slate-950/80 rounded border border-slate-800 hidden">
                         <div class="text-[10px] font-bold text-amber-300 mb-1 flex justify-between items-center">
-                            <span>Ваш вклад в клетку:</span>
+                            <span>Ваш вклад:</span>
                             <div class="flex items-center gap-1">
-                                <button onclick="resetMyDamage()" class="text-[9px] bg-red-950 hover:bg-red-900 text-red-300 border border-red-800 px-1 py-0.5 rounded" title="Сбросить только мой урон">Сбросить мой</button>
-                                <button onclick="toggleSiegeActionMenu()" class="text-[9px] bg-amber-600 text-white px-1.5 py-0.5 rounded font-bold">🎯 Осада (+/-)</button>
+                                <button onclick="resetMyDamage()" class="text-[9px] bg-red-950 hover:bg-red-900 text-red-300 border border-red-800 px-1.5 py-1 rounded" title="Сбросить только мой урон">Сбросить урон</button>
+                                <!-- Увеличенная кнопка Осада (+/-) -->
+                                <button onclick="toggleSiegeActionMenu()" class="text-[11px] bg-amber-600 hover:bg-amber-500 text-white px-3 py-1.5 rounded-md font-bold shadow transition-colors">🎯 Осада (+/-)</button>
                             </div>
                         </div>
                         <div id="siege-action-options" class="hidden mt-2 pt-2 border-t border-slate-800 space-y-1.5">
                             <div id="opt-shelter-wrap" class="flex items-center justify-between text-[11px]">
                                 <span class="text-slate-300">Убежище (+1B):</span>
                                 <div class="flex items-center gap-1">
-                                    <button onclick="modifyDamage('shelter', -1000000000)" class="px-1.5 bg-slate-800 hover:bg-slate-700 rounded text-red-400 font-bold">-</button>
-                                    <span id="my-dmg-shelter" class="font-mono w-6 text-center">0</span>
-                                    <button onclick="modifyDamage('shelter', 1000000000)" class="px-1.5 bg-slate-800 hover:bg-slate-700 rounded text-green-400 font-bold">+</button>
+                                    <button onclick="modifyDamage('shelter', -1000000000)" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-red-400 font-bold">-</button>
+                                    <span id="my-dmg-shelter" class="font-mono w-8 text-center">0</span>
+                                    <button onclick="modifyDamage('shelter', 1000000000)" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-green-400 font-bold">+</button>
                                 </div>
                             </div>
                             <div class="flex items-center justify-between text-[11px]">
                                 <span class="text-slate-300">Динамит (+1B):</span>
                                 <div class="flex items-center gap-1">
-                                    <button onclick="modifyDamage('dynamite', -1000000000)" class="px-1.5 bg-slate-800 hover:bg-slate-700 rounded text-red-400 font-bold">-</button>
-                                    <span id="my-dmg-dynamite" class="font-mono w-6 text-center">0</span>
-                                    <button onclick="modifyDamage('dynamite', 1000000000)" class="px-1.5 bg-slate-800 hover:bg-slate-700 rounded text-green-400 font-bold">+</button>
+                                    <button onclick="modifyDamage('dynamite', -1000000000)" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-red-400 font-bold">-</button>
+                                    <span id="my-dmg-dynamite" class="font-mono w-8 text-center">0</span>
+                                    <button onclick="modifyDamage('dynamite', 1000000000)" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-green-400 font-bold">+</button>
                                 </div>
                             </div>
                             <div class="flex items-center justify-between text-[11px]">
                                 <span class="text-slate-300">Бомба (+200M):</span>
                                 <div class="flex items-center gap-1">
-                                    <button onclick="modifyDamage('bomb', -200000000)" class="px-1.5 bg-slate-800 hover:bg-slate-700 rounded text-red-400 font-bold">-</button>
-                                    <span id="my-dmg-bomb" class="font-mono w-6 text-center">0</span>
-                                    <button onclick="modifyDamage('bomb', 200000000)" class="px-1.5 bg-slate-800 hover:bg-slate-700 rounded text-green-400 font-bold">+</button>
+                                    <button onclick="modifyDamage('bomb', -200000000)" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-red-400 font-bold">-</button>
+                                    <span id="my-dmg-bomb" class="font-mono w-8 text-center">0</span>
+                                    <button onclick="modifyDamage('bomb', 200000000)" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-green-400 font-bold">+</button>
                                 </div>
                             </div>
                         </div>
@@ -378,7 +375,6 @@
             supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         }
 
-        // Динамический список бойцов (подгружается из таблицы fighters)
         let dynamicMembers = [];
         let fighterToDeleteName = null;
 
@@ -731,7 +727,6 @@
                 .subscribe();
         }
 
-        // --- УПРАВЛЕНИЕ БОЙЦАМИ ---
         async function addFighter() {
             if (currentUserRole !== 'officer') {
                 alert('У вас нет прав для добавления бойцов.');
@@ -1064,7 +1059,7 @@
                 const isHighlighted = viewingPlayer && playersOnCell.includes(viewingPlayer);
 
                 if (isHighlighted) marker.className = 'cell-marker highlighted-shelter';
-                else if (hasMyShelter) marker.className = `cell-marker rank-${cell.color} has-my-shelter`;
+                else if (hasMyShelter) marker.className = 'cell-marker has-my-shelter';
                 else if (totalCount > 0) marker.className = `cell-marker rank-${cell.color} has-players`;
                 else marker.className = `cell-marker rank-${cell.color}`;
 
@@ -1098,7 +1093,6 @@
             });
         }
 
-        // --- УРОН ОСАДЫ ---
         function formatDamage(val) {
             if (val >= 1000000000) return (val / 1000000000).toFixed(1) + 'B';
             if (val >= 1000000) return (val / 1000000).toFixed(0) + 'M';
