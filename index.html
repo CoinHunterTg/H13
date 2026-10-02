@@ -161,7 +161,7 @@
                 
                 <div class="flex gap-2">
                     <button id="tab-btn-siege" onclick="switchTab('siege')" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-600 text-white transition-colors">
-                        ⚔️ Осада
+                        ⚔️️ Осада
                     </button>
                     <button id="tab-btn-shelters" onclick="switchTab('shelters')" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800 transition-colors">
                         ⛺ Убежища
@@ -196,7 +196,7 @@
                 <div class="bg-slate-900/90 backdrop-blur p-2.5 rounded-xl border border-slate-800 flex flex-col h-[340px]">
                     <h2 class="text-xs font-semibold text-slate-200 mb-1.5 pb-1.5 border-b border-slate-800 flex items-center justify-between">
                         <div class="flex items-center gap-1.5 overflow-hidden">
-                            <span>⚔️ Урон:</span>
+                            <span>⚔ Урон:</span>
                             <span id="siege-selected-cell-title" class="text-amber-400 font-mono text-[11px]">Не выбрана</span>
                         </div>
                         <button id="officer-clear-cell-btn" onclick="clearCellDamage()" class="text-[9px] bg-red-950 hover:bg-red-900 text-red-300 border border-red-800 px-1.5 py-0.5 rounded font-bold hidden shrink-0" title="Очистить весь урон по клетке">🗑 Сбросить клетку</button>
@@ -274,7 +274,7 @@
                     📍 Выберите клетку для отметки «Я здесь»
                 </div>
 
-                <!-- Панель миссии (теперь доступна офицерам) -->
+                <!-- Панель миссии -->
                 <div id="mission-panel-container" class="hidden absolute top-2 right-2 flex-col gap-1 bg-amber-950/90 border border-amber-600/60 p-2 rounded-lg text-xs z-20 shadow-md">
                     <div class="flex items-center justify-between gap-2">
                         <span class="text-amber-300 font-medium">🎯 Миссия:</span>
@@ -290,7 +290,6 @@
                     <button onclick="toggleIamHereMode()" id="btn-iamhere-mode" class="bg-blue-600 hover:bg-blue-500 text-white text-xs px-5 py-2.5 rounded-lg font-bold transition-colors shadow-lg flex items-center gap-1.5">
                         📍 Я здесь
                     </button>
-                    <!-- Кнопка «Миссия» дублирована здесь для быстрого и удобного доступа -->
                     <button onclick="toggleMissionMode()" id="btn-mission-top-shortcut" class="hidden bg-amber-700 hover:bg-amber-600 text-white text-xs px-4 py-2.5 rounded-lg font-bold transition-colors shadow-lg items-center gap-1.5">
                         🎯 Миссия
                     </button>
@@ -463,7 +462,7 @@
         ];
 
         let sheltersState = {}; 
-        let siegeState = {}; 
+        let siegeState = {}; // Состояния приоритетов клеток: { cell_id: status }
         let siegeMissionState = {}; 
         let siegeDamageState = {}; 
         let arsenalState = {}; 
@@ -558,9 +557,19 @@
                     if (latest.mission_text !== null && latest.mission_text !== '') {
                         try { siegeMissionState = JSON.parse(latest.mission_text); } catch(e) {}
                     }
-                    if (latest.target_name !== null && latest.target_name !== '') {
-                        try { siegeState = JSON.parse(latest.target_name); } catch(e) {}
-                    }
+                }
+
+                // Загрузка статусов целей из таблицы siege_cell_status
+                const { data: statusData, error: statusErr } = await supabaseClient.from('siege_cell_status').select('*');
+                if (!statusErr && statusData) {
+                    siegeState = {};
+                    statusData.forEach(row => {
+                        const cellId = row.id; 
+                        const status = row.status;
+                        if (cellId && status !== undefined) {
+                            siegeState[cellId] = Number(status); 
+                        }
+                    });
                 }
 
                 const { data: dmgData, error: dmgErr } = await supabaseClient.from('siege_damage').select('*');
@@ -574,6 +583,32 @@
                         if (!siegeDamageState[cellId]) siegeDamageState[cellId] = {};
                         if (!siegeDamageState[cellId][player]) siegeDamageState[cellId][player] = { shelter: 0, dynamite: 0, bomb: 0 };
                         siegeDamageState[cellId][player][type] = amount;
+                    });
+                }
+
+                // Загрузка данных «Арсенал» из Supabase
+                const { data: arsenalData, error: arsenalErr } = await supabaseClient.from('arsenal').select('*');
+                if (!arsenalErr && arsenalData) {
+                    arsenalState = {};
+                    arsenalData.forEach(row => {
+                        arsenalState[row.player_name] = {
+                            dynamite: row.dynamite || 0,
+                            bomb: row.bomb || 0
+                        };
+                    });
+                }
+
+                // Загрузка данных «Я здесь» из Supabase
+                const { data: iamHereData, error: iamHereErr } = await supabaseClient.from('iam_here').select('*');
+                if (!iamHereErr && iamHereData) {
+                    iamHereState = {};
+                    iamHereData.forEach(row => {
+                        const cellId = row.cell_id;
+                        const player = row.player_name;
+                        if (cellId && player) {
+                            if (!iamHereState[cellId]) iamHereState[cellId] = [];
+                            if (!iamHereState[cellId].includes(player)) iamHereState[cellId].push(player);
+                        }
                     });
                 }
             } catch (err) {
@@ -784,6 +819,33 @@
                     renderApp();
                 })
                 .subscribe();
+
+            // Подписка Realtime для таблицы siege_cell_status
+            supabaseClient
+                .channel('public:siege_cell_status')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'siege_cell_status' }, async () => {
+                    await loadDataFromSupabase();
+                    renderApp();
+                })
+                .subscribe();
+
+            // Подписка Realtime для Арсенала
+            supabaseClient
+                .channel('public:arsenal')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'arsenal' }, async () => {
+                    await loadDataFromSupabase();
+                    renderApp();
+                })
+                .subscribe();
+
+            // Подписка Realtime для «Я здесь»
+            supabaseClient
+                .channel('public:iam_here')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'iam_here' }, async () => {
+                    await loadDataFromSupabase();
+                    renderApp();
+                })
+                .subscribe();
         }
 
         async function addFighter() {
@@ -923,7 +985,6 @@
             
             if (supabaseClient) {
                 await supabaseClient.from('siege').insert([{
-                    target_name: JSON.stringify(siegeState),
                     mission_text: JSON.stringify(siegeMissionState),
                     announcement: clanAnnouncement
                 }]);
@@ -937,7 +998,6 @@
             document.getElementById('announcement-view').textContent = clanAnnouncement || 'Объявлений пока нет.';
             if (supabaseClient) {
                 await supabaseClient.from('siege').insert([{
-                    target_name: JSON.stringify(siegeState),
                     announcement: clanAnnouncement,
                     mission_text: JSON.stringify(siegeMissionState)
                 }]);
@@ -1125,12 +1185,34 @@
             });
         }
 
-        function modifyArsenal(nick, type, delta) {
+        async function modifyArsenal(nick, type, delta) {
             if (!arsenalState[nick]) arsenalState[nick] = { dynamite: 0, bomb: 0 };
             let newVal = (arsenalState[nick][type] || 0) + delta;
             if (newVal < 0) newVal = 0;
             arsenalState[nick][type] = newVal;
             renderArsenalList();
+
+            if (supabaseClient && nick === currentPlayer) {
+                const currentData = arsenalState[nick];
+                const { data: existing, error: selectErr } = await supabaseClient
+                    .from('arsenal')
+                    .select('id')
+                    .eq('player_name', nick)
+                    .maybeSingle();
+
+                if (!selectErr && existing) {
+                    await supabaseClient.from('arsenal').update({
+                        dynamite: currentData.dynamite,
+                        bomb: currentData.bomb
+                    }).eq('id', existing.id);
+                } else {
+                    await supabaseClient.from('arsenal').insert([{
+                        player_name: nick,
+                        dynamite: currentData.dynamite,
+                        bomb: currentData.bomb
+                    }]);
+                }
+            }
         }
 
         function toggleIamHereMode() {
@@ -1150,7 +1232,7 @@
             }
         }
 
-        function setPlayerIamHere(cellId) {
+        async function setPlayerIamHere(cellId) {
             for (let cId in iamHereState) {
                 iamHereState[cId] = iamHereState[cId].filter(p => p !== currentPlayer);
                 if (iamHereState[cId].length === 0) delete iamHereState[cId];
@@ -1161,6 +1243,15 @@
             isIamHereModeActive = false;
             document.getElementById('iamhere-mode-banner').classList.add('hidden');
             document.getElementById('btn-iamhere-mode').className = 'bg-blue-600 hover:bg-blue-500 text-white text-xs px-5 py-2.5 rounded-lg font-bold transition-colors shadow-lg flex items-center gap-1.5';
+            
+            if (supabaseClient) {
+                await supabaseClient.from('iam_here').delete().eq('player_name', currentPlayer);
+                await supabaseClient.from('iam_here').insert([{
+                    cell_id: String(cellId),
+                    player_name: currentPlayer
+                }]);
+            }
+
             renderSiege();
             renderCells();
         }
@@ -1204,7 +1295,7 @@
             activeModalCellId = null;
         }
 
-        function removeIamHerePlayer(cellId, nick) {
+        async function removeIamHerePlayer(cellId, nick) {
             if (currentUserRole !== 'officer' && nick !== currentPlayer) {
                 alert('⛔ У вас нет прав удалять чужие отметки!');
                 return;
@@ -1213,6 +1304,11 @@
                 iamHereState[cellId] = iamHereState[cellId].filter(p => p !== nick);
                 if (iamHereState[cellId].length === 0) delete iamHereState[cellId];
             }
+
+            if (supabaseClient) {
+                await supabaseClient.from('iam_here').delete().eq('cell_id', String(cellId)).eq('player_name', nick);
+            }
+
             renderSiege();
             renderCells();
             if (activeModalCellId) openCellPlayersModal(activeModalCellId);
@@ -1429,7 +1525,7 @@
         async function clearCellDamage() {
             if (currentUserRole !== 'officer' || !selectedSiegeCellId) return;
             const cell = CELLS_DATA.find(c => c.id == selectedSiegeCellId);
-            if (!confirm(`⚠️ ВНИМАНИЕ: Сбросить весь урон ВСЕХ бойцов по клетке "${cell ? cell.name : selectedSiegeCellId}"?`)) return;
+            if (!confirm(`⚠ ВНИМАНИЕ: Сбросить весь урон ВСЕХ бойцов по клетке "${cell ? cell.name : selectedSiegeCellId}"?`)) return;
 
             if (supabaseClient) {
                 await supabaseClient.from('siege_damage')
@@ -1571,7 +1667,6 @@
                             else siegeMissionState[cell.id] = { resource: '' };
                             if (supabaseClient) {
                                 await supabaseClient.from('siege').insert([{
-                                    target_name: JSON.stringify(siegeState),
                                     mission_text: JSON.stringify(siegeMissionState),
                                     announcement: clanAnnouncement
                                 }]);
@@ -1580,15 +1675,42 @@
                         } else {
                             let currentStatus = siegeState[cell.id] || 0;
                             let nextStatus = (currentStatus + 1) % 4;
-                            if (nextStatus === 0) delete siegeState[cell.id];
-                            else siegeState[cell.id] = nextStatus;
+                            
+                            if (nextStatus === 0) {
+                                delete siegeState[cell.id];
+                            } else {
+                                siegeState[cell.id] = nextStatus;
+                            }
 
+                            // Синхронизация статусов с таблицей siege_cell_status (включая updated_by)
                             if (supabaseClient) {
-                                await supabaseClient.from('siege').insert([{
-                                    target_name: JSON.stringify(siegeState),
-                                    announcement: clanAnnouncement,
-                                    mission_text: JSON.stringify(siegeMissionState)
-                                }]);
+                                if (nextStatus === 0) {
+                                    await supabaseClient.from('siege_cell_status')
+                                        .delete()
+                                        .eq('id', String(cell.id));
+                                } else {
+                                    const { data: existing, error: selectErr } = await supabaseClient
+                                        .from('siege_cell_status')
+                                        .select('id')
+                                        .eq('id', String(cell.id))
+                                        .maybeSingle();
+
+                                    if (!selectErr && existing) {
+                                        await supabaseClient.from('siege_cell_status')
+                                            .update({ 
+                                                status: String(nextStatus),
+                                                updated_by: currentPlayer 
+                                            })
+                                            .eq('id', existing.id);
+                                    } else {
+                                        await supabaseClient.from('siege_cell_status')
+                                            .insert([{
+                                                id: String(cell.id),
+                                                status: String(nextStatus),
+                                                updated_by: currentPlayer 
+                                            }]);
+                                    }
+                                }
                             }
                             renderSiege();
                         }
