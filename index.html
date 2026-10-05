@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Штаб H13 - Карта Осады</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Подключаем официальную библиотеку Supabase JS -->
@@ -121,9 +121,17 @@
             background-repeat: no-repeat;
             background-attachment: fixed;
         }
+
+        /* Вырезка фрагмента карты для карточки клетки */
+        .cell-crop-preview {
+            background-image: url('map.png');
+            background-size: 550% auto;
+            background-repeat: no-repeat;
+            filter: brightness(0.9) contrast(1.1);
+        }
     </style>
 </head>
-<body id="app-background" class="bg-slate-950 text-slate-100 min-h-screen font-sans p-2 md:p-3">
+<body id="app-background" class="bg-slate-950 text-slate-100 min-h-screen font-sans p-2 md:p-3 pb-10">
 
     <!-- ЭТАП 1: АВТОРИЗАЦИЯ -->
     <div id="auth-screen" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md flex items-center justify-center z-50">
@@ -161,7 +169,7 @@
                 
                 <div class="flex gap-2">
                     <button id="tab-btn-siege" onclick="switchTab('siege')" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-600 text-white transition-colors">
-                        ⚔️️ Осада
+                        ⚔ Осада
                     </button>
                     <button id="tab-btn-shelters" onclick="switchTab('shelters')" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800 transition-colors">
                         ⛺ Убежища
@@ -178,122 +186,11 @@
         </header>
 
         <!-- ВКЛАДКА 1: ОСАДА -->
-        <div id="tab-content-siege" class="grid grid-cols-1 lg:grid-cols-12 gap-3">
-            <div class="lg:col-span-3 flex flex-col gap-3">
-                <div class="bg-slate-900/90 backdrop-blur p-2.5 rounded-xl border border-slate-800">
-                    <div class="flex items-center justify-between mb-1.5 pb-1.5 border-b border-slate-800">
-                        <span class="text-xs font-bold text-amber-400 uppercase tracking-wider">📢 Объявление</span>
-                        <div id="announcement-actions" class="hidden gap-1.5">
-                            <button onclick="saveAnnouncement()" class="text-[10px] bg-amber-600 hover:bg-amber-500 text-white px-2 py-0.5 rounded font-medium">Сохранить</button>
-                            <button onclick="clearAnnouncement()" class="text-[10px] text-red-400 hover:text-red-300 underline">Очистить</button>
-                        </div>
-                    </div>
-                    <div id="announcement-view" class="text-xs text-slate-200 whitespace-pre-wrap min-h-[35px] p-2 bg-slate-950/60 rounded border border-slate-800/80">Объявлений пока нет.</div>
-                    <textarea id="announcement-input" class="w-full bg-slate-950 text-white text-xs border border-slate-700 rounded p-1.5 focus:outline-none focus:border-amber-500 hidden min-h-[60px]" placeholder="Введите указание..."></textarea>
-                </div>
-
-                <!-- БЛОК УРОНА И ВЛАДЕЛЬЦЕВ -->
-                <div class="bg-slate-900/90 backdrop-blur p-2.5 rounded-xl border border-slate-800 flex flex-col h-[340px]">
-                    <h2 class="text-xs font-semibold text-slate-200 mb-1.5 pb-1.5 border-b border-slate-800 flex items-center justify-between">
-                        <div class="flex items-center gap-1.5 overflow-hidden">
-                            <span>⚔ Урон:</span>
-                            <span id="siege-selected-cell-title" class="text-amber-400 font-mono text-[11px]">Не выбрана</span>
-                        </div>
-                        <button id="officer-clear-cell-btn" onclick="clearCellDamage()" class="text-[9px] bg-red-950 hover:bg-red-900 text-red-300 border border-red-800 px-1.5 py-0.5 rounded font-bold hidden shrink-0" title="Очистить весь урон по клетке">🗑 Сбросить клетку</button>
-                    </h2>
-                    
-                    <div class="mb-2">
-                        <div class="flex items-center gap-1 w-full">
-                            <button id="btn-select-target" onclick="toggleTargetSelectionMode()" class="flex-1 text-[11px] bg-amber-600 hover:bg-amber-500 text-white px-3 py-2 rounded-md font-bold shadow transition-colors text-center">🎯 Выбрать цель</button>
-                            <button id="btn-fix-target" onclick="fixTargetDamage()" class="hidden flex-1 text-[11px] bg-green-600 hover:bg-green-500 text-white px-3 py-2 rounded-md font-bold shadow transition-colors text-center">Зафиксировать</button>
-                        </div>
-                    </div>
-
-                    <div id="my-damage-panel" class="mb-2 p-2 bg-slate-950/80 rounded border border-slate-800 hidden">
-                        <div class="text-[10px] font-bold text-amber-300 mb-1 flex flex-col gap-1.5">
-                            <div class="flex justify-between items-center">
-                                <span>Результат осады:</span>
-                                <div class="flex items-center gap-1">
-                                    <button onclick="resetMyDamage()" class="text-[9px] bg-red-950 hover:bg-red-900 text-red-300 border border-red-800 px-1.5 py-1 rounded" title="Сбросить только мой урон">Сбросить урон</button>
-                                </div>
-                            </div>
-                        </div>
-                        <div id="siege-action-options" class="hidden mt-2 pt-2 border-t border-slate-800 space-y-1.5">
-                            <div id="opt-shelter-wrap" class="flex items-center justify-between text-[11px]">
-                                <span class="text-slate-300">Убежище (+1B):</span>
-                                <div class="flex items-center gap-1">
-                                    <button onclick="modifyDamage('shelter', -1000000000)" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-red-400 font-bold">-</button>
-                                    <span id="my-dmg-shelter" class="font-mono w-8 text-center">0</span>
-                                    <button onclick="modifyDamage('shelter', 1000000000)" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-green-400 font-bold">+</button>
-                                </div>
-                            </div>
-                            <div class="flex items-center justify-between text-[11px]">
-                                <span class="text-slate-300">Динамит (+1B):</span>
-                                <div class="flex items-center gap-1">
-                                    <button onclick="modifyDamage('dynamite', -1000000000)" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-red-400 font-bold">-</button>
-                                    <span id="my-dmg-dynamite" class="font-mono w-8 text-center">0</span>
-                                    <button onclick="modifyDamage('dynamite', 1000000000)" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-green-400 font-bold">+</button>
-                                </div>
-                            </div>
-                            <div class="flex items-center justify-between text-[11px]">
-                                <span class="text-slate-300">Бомба (+200M):</span>
-                                <div class="flex items-center gap-1">
-                                    <button onclick="modifyDamage('bomb', -200000000)" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-red-400 font-bold">-</button>
-                                    <span id="my-dmg-bomb" class="font-mono w-8 text-center">0</span>
-                                    <button onclick="modifyDamage('bomb', 200000000)" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-green-400 font-bold">+</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="text-[10px] text-slate-400 mb-1">Список бойцов и урон:</div>
-                    <div id="siege-owners-list" class="overflow-y-auto flex-1 space-y-1 text-xs pr-1">
-                        <div class="text-slate-500 text-center py-6 text-[11px]">Кликните по клетке на карте</div>
-                    </div>
-                </div>
-
-                <!-- БЛОК АРСЕНАЛ -->
-                <div class="bg-slate-900/90 backdrop-blur p-2.5 rounded-xl border border-slate-800 flex flex-col h-[210px]">
-                    <h2 class="text-xs font-semibold text-slate-200 mb-1.5 pb-1.5 border-b border-slate-800 flex items-center justify-between">
-                        <span>📦 Арсенал</span>
-                    </h2>
-                    <div id="arsenal-list" class="overflow-y-auto flex-1 space-y-1 text-xs pr-1">
-                        <div class="text-slate-500 text-center py-6 text-[11px]">Загрузка арсенала...</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Центральный блок с картой -->
-            <div class="lg:col-span-6 bg-transparent p-2 flex flex-col items-center justify-center relative min-h-[520px]">
+        <div id="tab-content-siege" class="flex flex-col gap-3 max-w-4xl mx-auto">
+            
+            <!-- 1. ИГРОВАЯ КАРТА -->
+            <div class="bg-slate-900/90 backdrop-blur p-2.5 rounded-xl border border-slate-800 flex flex-col items-center justify-center relative min-h-[520px]">
                 <div class="absolute top-2 left-2 text-[11px] text-slate-300 bg-slate-950/60 px-2 py-0.5 rounded border border-slate-800 z-10" id="siege-role-hint">Режим просмотра</div>
-                
-                <div id="selection-mode-banner" class="hidden absolute top-12 left-1/2 -translate-x-1/2 bg-amber-600 text-white font-bold px-3 py-1 rounded-lg text-xs z-30 shadow-lg animate-pulse">
-                    🎯 Режим выбора цели активен: нажмите на клетку
-                </div>
-                <div id="iamhere-mode-banner" class="hidden absolute top-12 left-1/2 -translate-x-1/2 bg-red-600 text-white font-bold px-3 py-1 rounded-lg text-xs z-30 shadow-lg animate-pulse">
-                    📍 Выберите клетку для отметки «Я здесь»
-                </div>
-
-                <!-- Панель миссии -->
-                <div id="mission-panel-container" class="hidden absolute top-2 right-2 flex-col gap-1 bg-amber-950/90 border border-amber-600/60 p-2 rounded-lg text-xs z-20 shadow-md">
-                    <div class="flex items-center justify-between gap-2">
-                        <span class="text-amber-300 font-medium">🎯 Миссия:</span>
-                        <button id="mission-mode-toggle-btn" onclick="toggleMissionMode()" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-bold transition-colors">Выкл</button>
-                    </div>
-                    <div id="mission-resource-input-wrap" class="hidden mt-1">
-                        <input type="text" id="mission-resource-input" oninput="updateMissionResource()" placeholder="Ресурс (напр. Трава)..." class="w-full bg-slate-950 text-amber-200 text-[11px] border border-amber-600/50 rounded px-2 py-1 focus:outline-none">
-                    </div>
-                </div>
-
-                <!-- Кнопки управления в ряду сверху над картой -->
-                <div class="w-full flex justify-center items-center gap-2 mb-2 z-20">
-                    <button onclick="toggleIamHereMode()" id="btn-iamhere-mode" class="bg-blue-600 hover:bg-blue-500 text-white text-xs px-5 py-2.5 rounded-lg font-bold transition-colors shadow-lg flex items-center gap-1.5">
-                        📍 Я здесь
-                    </button>
-                    <button onclick="toggleMissionMode()" id="btn-mission-top-shortcut" class="hidden bg-amber-700 hover:bg-amber-600 text-white text-xs px-4 py-2.5 rounded-lg font-bold transition-colors shadow-lg items-center gap-1.5">
-                        🎯 Миссия
-                    </button>
-                </div>
 
                 <div id="siege-map-container" class="relative w-full max-w-[480px]" style="aspect-ratio: 594 / 865;">
                     <img src="map.png" class="absolute inset-0 w-full h-full object-contain rounded-lg shadow-2xl" alt="Карта" onerror="this.style.display='none'">
@@ -301,10 +198,11 @@
                 </div>
             </div>
 
-            <div class="lg:col-span-3 bg-slate-900/90 backdrop-blur p-2.5 rounded-xl border border-slate-800 flex flex-col h-[565px]">
+            <!-- 2. ПРИОРИТЕТЫ ОСАДЫ (высота списка до 9 строк) -->
+            <div class="bg-slate-900/90 backdrop-blur p-2.5 rounded-xl border border-slate-800 flex flex-col">
                 <h2 class="text-xs font-semibold text-slate-200 mb-1.5 pb-1.5 border-b border-slate-800">⚡ Приоритеты осады</h2>
                 
-                <div class="overflow-y-auto flex-1 space-y-2.5 text-xs pr-1">
+                <div class="overflow-y-auto max-h-[270px] space-y-2.5 text-xs pr-1">
                     <div>
                         <div class="text-[10px] font-bold text-orange-400 uppercase tracking-wider mb-1">🎯 1-я очередь</div>
                         <div id="siege-p1-list" class="space-y-1"><span class="text-slate-500 text-[11px]">Нет целей</span></div>
@@ -330,6 +228,30 @@
                     </div>
                 </div>
             </div>
+
+            <!-- 3. БЛОК АРСЕНАЛ -->
+            <div class="bg-slate-900/90 backdrop-blur p-2.5 rounded-xl border border-slate-800 flex flex-col min-h-[220px] max-h-[280px]">
+                <h2 class="text-xs font-semibold text-slate-200 mb-1.5 pb-1.5 border-b border-slate-800 flex items-center justify-between">
+                    <span>📦 Арсенал</span>
+                </h2>
+                <div id="arsenal-list" class="overflow-y-auto flex-1 space-y-1 text-xs pr-1">
+                    <div class="text-slate-500 text-center py-6 text-[11px]">Загрузка арсенала...</div>
+                </div>
+            </div>
+
+            <!-- 4. ПОЛЕ ЗАМЕТКИ -->
+            <div class="bg-slate-900/90 backdrop-blur p-2.5 rounded-xl border border-slate-800">
+                <div class="flex items-center justify-between mb-1.5 pb-1.5 border-b border-slate-800">
+                    <span class="text-xs font-bold text-amber-400 uppercase tracking-wider">📢 Заметки</span>
+                    <div id="announcement-actions" class="hidden gap-1.5">
+                        <button onclick="saveAnnouncement()" class="text-[10px] bg-amber-600 hover:bg-amber-500 text-white px-2 py-0.5 rounded font-medium">Сохранить</button>
+                        <button onclick="clearAnnouncement()" class="text-[10px] text-red-400 hover:text-red-300 underline">Очистить</button>
+                    </div>
+                </div>
+                <div id="announcement-view" class="text-xs text-slate-200 whitespace-pre-wrap min-h-[35px] p-2 bg-slate-950/60 rounded border border-slate-800/80">Заметок пока нет.</div>
+                <textarea id="announcement-input" class="w-full bg-slate-950 text-white text-xs border border-slate-700 rounded p-1.5 focus:outline-none focus:border-amber-500 hidden min-h-[60px]" placeholder="Введите заметку..."></textarea>
+            </div>
+
         </div>
 
         <!-- ВКЛАДКА 2: УБЕЖИЩА -->
@@ -390,6 +312,119 @@
         </div>
     </div>
 
+    <!-- ВСПЛЫВАЮЩЕЕ МОДАЛЬНОЕ ОКНО "КАРТОЧКА КЛЕТКИ" -->
+    <div id="cell-card-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center z-50 hidden p-3" onclick="closeCellCardModal()">
+        <div class="bg-slate-900 border border-slate-700/80 rounded-2xl max-w-md w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden relative" onclick="event.stopPropagation()">
+            
+            <!-- Шапка карточки с динамо-вырезкой карты -->
+            <div class="relative h-28 w-full border-b border-slate-800 overflow-hidden bg-slate-950">
+                <div id="cell-card-map-crop" class="absolute inset-0 cell-crop-preview opacity-85"></div>
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent"></div>
+                
+                <!-- Кнопка закрытия -->
+                <button onclick="closeCellCardModal()" class="absolute top-2.5 right-2.5 bg-slate-950/80 hover:bg-slate-800 text-slate-300 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border border-slate-700 z-10 transition-colors">✕</button>
+                
+                <div class="absolute bottom-2.5 left-3 right-3 flex items-end justify-between z-10">
+                    <div>
+                        <div class="flex items-center gap-2 mb-0.5">
+                            <span id="cell-card-color-badge" class="text-[10px] font-bold uppercase tracking-wider text-amber-400 bg-slate-950/80 px-2 py-0.5 rounded border border-slate-800">Фиолетовая</span>
+                        </div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <h2 id="cell-card-name" class="text-lg font-black text-white tracking-wide leading-tight drop-shadow">Название Клетки</h2>
+                            <span id="cell-card-shelter-count" class="text-xs font-bold text-amber-300 bg-slate-950/80 border border-amber-500/30 px-2 py-0.5 rounded-lg flex items-center gap-1 shadow" title="Владельцев убежищ на этой клетке">
+                                ⛺ <span id="cell-card-shelters-num">0</span>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="text-right shrink-0">
+                        <div class="text-[10px] text-slate-400">Общий урон</div>
+                        <div id="cell-card-total-dmg" class="text-base font-black font-mono text-amber-400 drop-shadow">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Тело карточки со скроллом -->
+            <div class="p-3.5 space-y-3 overflow-y-auto flex-1 text-xs">
+                
+                <!-- ОФИЦЕРСКАЯ ПАНЕЛЬ СТАТУСА ЦЕЛИ -->
+                <div id="cell-card-officer-controls" class="bg-slate-950/90 border border-amber-600/40 p-2.5 rounded-xl space-y-2 hidden">
+                    <div class="flex items-center justify-between text-[11px]">
+                        <span class="font-bold text-amber-400">⚡ Статус цели (Офицер):</span>
+                        <button onclick="officerClearCellDamage()" class="text-[10px] bg-red-950 hover:bg-red-900 text-red-300 border border-red-800 px-2 py-0.5 rounded font-bold transition-colors">🗑 Сбросить весь урон</button>
+                    </div>
+                    <div class="grid grid-cols-4 gap-1.5">
+                        <button onclick="setCellStatusFromCard(1)" id="btn-status-1" class="py-1.5 rounded text-[10px] font-bold border border-amber-500/30 bg-slate-900 text-slate-300 hover:bg-amber-600 hover:text-white transition-all">🎯 1-я очеред.</button>
+                        <button onclick="setCellStatusFromCard(2)" id="btn-status-2" class="py-1.5 rounded text-[10px] font-bold border border-cyan-500/30 bg-slate-900 text-slate-300 hover:bg-cyan-600 hover:text-white transition-all">⚡ 2-я очеред.</button>
+                        <button onclick="setCellStatusFromCard(3)" id="btn-status-3" class="py-1.5 rounded text-[10px] font-bold border border-red-500/30 bg-slate-900 text-slate-300 hover:bg-red-600 hover:text-white transition-all">🧱 Запрет</button>
+                        <button onclick="setCellStatusFromCard(0)" id="btn-status-0" class="py-1.5 rounded text-[10px] font-bold border border-slate-700 bg-slate-900 text-slate-400 hover:bg-slate-800 transition-all">✕ Сброс</button>
+                    </div>
+                    
+                    <!-- Ресурс миссии -->
+                    <div id="card-mission-input-wrap" class="pt-1 border-t border-slate-800 flex items-center gap-2">
+                        <span class="text-[10px] text-amber-300 font-medium shrink-0">🎯 Миссия:</span>
+                        <input type="text" id="card-mission-resource-input" oninput="updateCardMissionResource()" placeholder="Ресурс (напр. Трава)..." class="w-full bg-slate-900 text-amber-200 text-xs border border-slate-700 rounded px-2 py-1 focus:outline-none focus:border-amber-500">
+                    </div>
+                </div>
+
+                <!-- БЛОК МОЕГО УРОНА ПO КЛЕТКЕ -->
+                <div class="bg-slate-950/80 p-3 rounded-xl border border-slate-800 space-y-2">
+                    <div class="flex justify-between items-center pb-1.5 border-b border-slate-800">
+                        <span class="font-bold text-amber-400 text-xs">⚔ Ваш урон по этой клетке:</span>
+                        <button onclick="resetMyDamage()" class="text-[10px] text-red-400 hover:text-red-300 underline font-medium">Сбросить мой урон</button>
+                    </div>
+
+                    <div id="card-shelter-wrap" class="flex items-center justify-between py-1">
+                        <span class="text-slate-300 text-xs">Убежища (до 2B):</span>
+                        <div class="flex items-center gap-2">
+                            <button onclick="modifyDamage('shelter', -1000000000)" class="w-8 h-8 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 rounded-lg text-red-400 font-bold text-base flex items-center justify-center">-</button>
+                            <span id="card-my-dmg-shelter" class="font-mono w-12 text-center text-sm font-bold">0</span>
+                            <button onclick="modifyDamage('shelter', 1000000000)" class="w-8 h-8 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 rounded-lg text-green-400 font-bold text-base flex items-center justify-center">+</button>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between py-1 border-t border-slate-800/60">
+                        <span class="text-slate-300 text-xs">Динамит 🧨 (+2B):</span>
+                        <div class="flex items-center gap-2">
+                            <button onclick="modifyDamage('dynamite', -2000000000)" class="w-8 h-8 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 rounded-lg text-red-400 font-bold text-base flex items-center justify-center">-</button>
+                            <span id="card-my-dmg-dynamite" class="font-mono w-12 text-center text-sm font-bold">0</span>
+                            <button onclick="modifyDamage('dynamite', 2000000000)" class="w-8 h-8 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 rounded-lg text-green-400 font-bold text-base rounded flex items-center justify-center">+</button>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between py-1 border-t border-slate-800/60">
+                        <span class="text-slate-300 text-xs">Бомба 💣 (+200M):</span>
+                        <div class="flex items-center gap-2">
+                            <button onclick="modifyDamage('bomb', -200000000)" class="w-8 h-8 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 rounded-lg text-red-400 font-bold text-base flex items-center justify-center">-</button>
+                            <span id="card-my-dmg-bomb" class="font-mono w-12 text-center text-sm font-bold">0</span>
+                            <button onclick="modifyDamage('bomb', 200000000)" class="w-8 h-8 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 rounded-lg text-green-400 font-bold text-base rounded flex items-center justify-center">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ОПЦИИ БЫСТРОЙ ОТМЕТКИ -->
+                <div class="flex gap-2">
+                    <button id="card-iamhere-btn" onclick="toggleIamHereFromCard()" class="flex-1 py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition-colors shadow flex items-center justify-center gap-1.5">
+                        📍 Я здесь
+                    </button>
+                    <button id="card-whoishere-btn" onclick="openCellPlayersModal(selectedSiegeCellId)" class="flex-1 py-2 px-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs transition-colors shadow flex items-center justify-center gap-1.5">
+                        👥 Кто здесь
+                    </button>
+                </div>
+
+                <!-- СПИСОК БОЙЦОВ И ВЛАДЕЛЬЦЕВ НА КЛЕТКЕ -->
+                <div>
+                    <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 flex justify-between items-center">
+                        <span>👥 Атаковавшие и Убежища:</span>
+                    </div>
+                    <div id="card-siege-owners-list" class="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                        <div class="text-slate-500 text-center py-4 text-xs">Нет участников</div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
     <!-- МОДАЛЬНОЕ ОКНО СПИСКА ИГРОКОВ НА КЛЕТКЕ («Я здесь») -->
     <div id="cell-players-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50 hidden" onclick="closeCellPlayersModal()">
         <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl max-w-xs w-full mx-4 shadow-2xl space-y-3" onclick="event.stopPropagation()">
@@ -404,7 +439,7 @@
     <!-- МОДАЛЬНОЕ ОКНО ПОДТВЕРЖДЕНИЯ УДАЛЕНИЯ -->
     <div id="confirm-delete-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50 hidden">
         <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl max-w-xs w-full mx-4 shadow-2xl space-y-3 text-center">
-            <h3 class="text-sm font-bold text-red-400">⚠️ Подтверждение удаления</h3>
+            <h3 class="text-sm font-bold text-red-400">⚠️️ Подтверждение удаления</h3>
             <p class="text-xs text-slate-300">Вы действительно хотите удалить бойца <strong id="modal-fighter-name" class="text-amber-400"></strong>?</p>
             <div class="flex gap-2 pt-2">
                 <button onclick="closeDeleteModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs py-2 rounded-lg transition-colors font-medium">Отмена</button>
@@ -462,7 +497,7 @@
         ];
 
         let sheltersState = {}; 
-        let siegeState = {}; // Состояния приоритетов клеток: { cell_id: status }
+        let siegeState = {}; 
         let siegeMissionState = {}; 
         let siegeDamageState = {}; 
         let arsenalState = {}; 
@@ -475,9 +510,6 @@
         let currentUserRole = localStorage.getItem('proto_auth_role') || '';
         let viewingPlayer = '';
         let selectedSiegeCellId = null;
-        let isMissionEditingMode = false;
-        let isTargetSelectionActive = false; 
-        let isIamHereModeActive = false;     
 
         function getAllMembers() {
             return dynamicMembers.map(f => f.name);
@@ -559,7 +591,6 @@
                     }
                 }
 
-                // Загрузка статусов целей из таблицы siege_cell_status
                 const { data: statusData, error: statusErr } = await supabaseClient.from('siege_cell_status').select('*');
                 if (!statusErr && statusData) {
                     siegeState = {};
@@ -586,7 +617,6 @@
                     });
                 }
 
-                // Загрузка данных «Арсенал» из Supabase
                 const { data: arsenalData, error: arsenalErr } = await supabaseClient.from('arsenal').select('*');
                 if (!arsenalErr && arsenalData) {
                     arsenalState = {};
@@ -598,7 +628,6 @@
                     });
                 }
 
-                // Загрузка данных «Я здесь» из Supabase
                 const { data: iamHereData, error: iamHereErr } = await supabaseClient.from('iam_here').select('*');
                 if (!iamHereErr && iamHereData) {
                     iamHereState = {};
@@ -739,13 +768,10 @@
             const annView = document.getElementById('announcement-view');
             const annInput = document.getElementById('announcement-input');
             const annActions = document.getElementById('announcement-actions');
-            const missionPanel = document.getElementById('mission-panel-container');
-            const missionTopShortcut = document.getElementById('btn-mission-top-shortcut');
-            const officerClearCellBtn = document.getElementById('officer-clear-cell-btn');
             const officerManagementPanel = document.getElementById('officerManagementPanel');
 
             document.getElementById('current-user-display').textContent = currentPlayer;
-            annView.textContent = clanAnnouncement || 'Объявлений пока нет.';
+            annView.textContent = clanAnnouncement || 'Заметок пока нет.';
             annInput.value = clanAnnouncement;
 
             if (currentUserRole === 'officer') {
@@ -753,34 +779,23 @@
                 badge.textContent = '⚡ Офицер';
                 resetBtn.classList.remove('hidden');
                 hint.textContent = 'Офицер: клик по нику — просмотр убежищ';
-                siegeHint.textContent = '⚡ Офицер: клик по клетке меняет приоритет';
+                siegeHint.textContent = '⚡ Офицер: клик по клетке откроет карточку';
                 annActions.classList.remove('hidden');
                 annActions.classList.add('flex');
                 annInput.classList.remove('hidden');
                 annView.classList.add('hidden');
-                missionPanel.classList.remove('hidden');
-                missionPanel.classList.add('flex');
-                if (missionTopShortcut) {
-                    missionTopShortcut.classList.remove('hidden');
-                    missionTopShortcut.classList.add('flex');
-                }
                 officerManagementPanel.classList.remove('hidden');
-                if (selectedSiegeCellId) officerClearCellBtn.classList.remove('hidden');
             } else {
                 badge.className = 'text-xs px-2.5 py-1 rounded bg-slate-900 border border-slate-800 text-slate-300';
                 badge.textContent = '🔒 Участник';
                 resetBtn.classList.add('hidden');
                 hint.textContent = 'Участник: свои точки';
-                siegeHint.textContent = '🔒 Тактика руководства';
+                siegeHint.textContent = '🔒 Нажмите на клетку для отображения карточки';
                 annActions.classList.add('hidden');
                 annActions.classList.remove('flex');
                 annInput.classList.add('hidden');
                 annView.classList.remove('hidden');
-                missionPanel.classList.add('hidden');
-                missionPanel.classList.remove('flex');
-                if (missionTopShortcut) missionTopShortcut.classList.add('hidden');
                 officerManagementPanel.classList.add('hidden');
-                officerClearCellBtn.classList.add('hidden');
             }
         }
 
@@ -820,7 +835,6 @@
                 })
                 .subscribe();
 
-            // Подписка Realtime для таблицы siege_cell_status
             supabaseClient
                 .channel('public:siege_cell_status')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'siege_cell_status' }, async () => {
@@ -829,7 +843,6 @@
                 })
                 .subscribe();
 
-            // Подписка Realtime для Арсенала
             supabaseClient
                 .channel('public:arsenal')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'arsenal' }, async () => {
@@ -838,7 +851,6 @@
                 })
                 .subscribe();
 
-            // Подписка Realtime для «Я здесь»
             supabaseClient
                 .channel('public:iam_here')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'iam_here' }, async () => {
@@ -945,43 +957,17 @@
             }
         }
 
-        function toggleMissionMode() {
-            if (currentUserRole !== 'officer') {
-                alert('Режим миссии доступен только офицерам.');
-                return;
-            }
-            isMissionEditingMode = !isMissionEditingMode;
-            
-            const btn = document.getElementById('mission-mode-toggle-btn');
-            const btnShortcut = document.getElementById('btn-mission-top-shortcut');
-            const resWrap = document.getElementById('mission-resource-input-wrap');
-
-            if (isMissionEditingMode) {
-                if (btn) {
-                    btn.className = 'px-2 py-0.5 rounded bg-amber-600 text-white font-bold transition-colors shadow';
-                    btn.textContent = 'ВКЛ';
-                }
-                if (btnShortcut) {
-                    btnShortcut.className = 'flex bg-amber-600 hover:bg-amber-500 text-white text-xs px-4 py-2.5 rounded-lg font-bold transition-colors shadow-lg items-center gap-1.5 ring-2 ring-white';
-                }
-                if (resWrap) resWrap.classList.remove('hidden');
-            } else {
-                if (btn) {
-                    btn.className = 'px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-bold transition-colors';
-                    btn.textContent = 'Выкл';
-                }
-                if (btnShortcut) {
-                    btnShortcut.className = 'flex bg-amber-700 hover:bg-amber-600 text-white text-xs px-4 py-2.5 rounded-lg font-bold transition-colors shadow-lg items-center gap-1.5';
-                }
-                if (resWrap) resWrap.classList.add('hidden');
-            }
-        }
-
-        async function updateMissionResource() {
+        async function updateCardMissionResource() {
             if (!selectedSiegeCellId) return;
-            const val = document.getElementById('mission-resource-input').value;
-            if (!siegeMissionState[selectedSiegeCellId]) siegeMissionState[selectedSiegeCellId] = {};
-            siegeMissionState[selectedSiegeCellId].resource = val;
+            const inputEl = document.getElementById('card-mission-resource-input');
+            const val = inputEl ? inputEl.value.trim() : '';
+
+            if (val) {
+                if (!siegeMissionState[selectedSiegeCellId]) siegeMissionState[selectedSiegeCellId] = {};
+                siegeMissionState[selectedSiegeCellId].resource = val;
+            } else {
+                delete siegeMissionState[selectedSiegeCellId];
+            }
             
             if (supabaseClient) {
                 await supabaseClient.from('siege').insert([{
@@ -995,14 +981,14 @@
         async function saveAnnouncement() {
             if (currentUserRole !== 'officer') return;
             clanAnnouncement = document.getElementById('announcement-input').value.trim();
-            document.getElementById('announcement-view').textContent = clanAnnouncement || 'Объявлений пока нет.';
+            document.getElementById('announcement-view').textContent = clanAnnouncement || 'Заметок пока нет.';
             if (supabaseClient) {
                 await supabaseClient.from('siege').insert([{
                     announcement: clanAnnouncement,
                     mission_text: JSON.stringify(siegeMissionState)
                 }]);
             }
-            alert('✅ Объявление обновлено и сохранено в базу!');
+            alert('✅ Заметки обновлены и сохранены в базу!');
         }
 
         async function clearAnnouncement() {
@@ -1125,61 +1111,71 @@
             renderArsenalList();
         }
 
+        /* --- БЛОК АРСЕНАЛА --- */
         function renderArsenalList() {
             const container = document.getElementById('arsenal-list');
             if (!container) return;
             container.innerHTML = '';
 
-            let members = getAllMembers();
-            members.sort((a, b) => {
+            const allMembers = getAllMembers();
+
+            if (currentPlayer) {
+                let myData = arsenalState[currentPlayer] || { dynamite: 0, bomb: 0 };
+                let myDyn = myData.dynamite || 0;
+                let myBomb = myData.bomb || 0;
+
+                const myRow = document.createElement('div');
+                myRow.className = 'flex flex-col gap-1.5 p-2 rounded-xl bg-amber-950/40 border border-amber-500/60 shadow-sm mb-1.5';
+                
+                myRow.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <span class="text-amber-400 font-bold text-xs truncate">👤 ${currentPlayer} <span class="text-[9px] bg-amber-800/80 text-amber-100 px-1 py-0.2 rounded ml-1">Вы</span></span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 pt-0.5">
+                        <div class="flex items-center justify-between bg-slate-950/80 p-1 rounded-lg border border-slate-800">
+                            <span class="text-xs font-bold">🧨</span>
+                            <div class="flex items-center gap-1.5">
+                                <button onclick="modifyArsenal('${currentPlayer}', 'dynamite', -1)" class="w-7 h-7 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-red-400 font-bold text-base rounded flex items-center justify-center transition-colors">-</button>
+                                <span class="font-mono text-sm font-bold w-5 text-center text-amber-300">${myDyn}</span>
+                                <button onclick="modifyArsenal('${currentPlayer}', 'dynamite', 1)" class="w-7 h-7 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-green-400 font-bold text-base rounded flex items-center justify-center transition-colors">+</button>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between bg-slate-950/80 p-1 rounded-lg border border-slate-800">
+                            <span class="text-xs font-bold">💣</span>
+                            <div class="flex items-center gap-1.5">
+                                <button onclick="modifyArsenal('${currentPlayer}', 'bomb', -1)" class="w-7 h-7 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-red-400 font-bold text-base rounded flex items-center justify-center transition-colors">-</button>
+                                <span class="font-mono text-sm font-bold w-5 text-center text-amber-300">${myBomb}</span>
+                                <button onclick="modifyArsenal('${currentPlayer}', 'bomb', 1)" class="w-7 h-7 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-green-400 font-bold text-base rounded flex items-center justify-center transition-colors">+</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(myRow);
+            }
+
+            let otherMembers = allMembers.filter(m => m !== currentPlayer);
+            otherMembers.sort((a, b) => {
                 let aData = arsenalState[a] || { dynamite: 0, bomb: 0 };
                 let bData = arsenalState[b] || { dynamite: 0, bomb: 0 };
-                let aTotal = (aData.dynamite || 0) + (aData.bomb || 0);
-                let bTotal = (bData.dynamite || 0) + (bData.bomb || 0);
-                return bTotal - aTotal;
+                let aVal = (aData.dynamite || 0) * 10000 + (aData.bomb || 0);
+                let bVal = (bData.dynamite || 0) * 10000 + (bData.bomb || 0);
+                return bVal - aVal;
             });
 
-            members.forEach(nick => {
-                let isCurrent = (nick === currentPlayer);
+            otherMembers.forEach(nick => {
                 let data = arsenalState[nick] || { dynamite: 0, bomb: 0 };
                 let dyn = data.dynamite || 0;
                 let bomb = data.bomb || 0;
 
                 const row = document.createElement('div');
-                row.className = `flex items-center justify-between p-1 rounded-lg bg-slate-950/60 border ${isCurrent ? 'border-amber-600/50' : 'border-slate-800'} text-xs`;
-
-                let controlsHtml = '';
-                if (isCurrent) {
-                    controlsHtml = `
-                        <div class="flex items-center gap-2">
-                            <div class="flex items-center gap-1">
-                                <span class="text-[10px] text-slate-400">🧨:</span>
-                                <button onclick="modifyArsenal('${nick}', 'dynamite', -1)" class="px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 rounded text-red-400 font-bold">-</button>
-                                <span class="font-mono w-4 text-center">${dyn}</span>
-                                <button onclick="modifyArsenal('${nick}', 'dynamite', 1)" class="px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 rounded text-green-400 font-bold">+</button>
-                            </div>
-                            <div class="flex items-center gap-1">
-                                <span class="text-[10px] text-slate-400">💣:</span>
-                                <button onclick="modifyArsenal('${nick}', 'bomb', -1)" class="px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 rounded text-red-400 font-bold">-</button>
-                                <span class="font-mono w-4 text-center">${bomb}</span>
-                                <button onclick="modifyArsenal('${nick}', 'bomb', 1)" class="px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 rounded text-green-400 font-bold">+</button>
-                            </div>
-                        </div>
-                    `;
-                } else {
-                    controlsHtml = `
-                        <div class="flex items-center gap-3 font-mono text-[11px]">
-                            <span class="text-slate-300">🧨 <strong class="text-amber-400">${dyn}</strong></span>
-                            <span class="text-slate-300">💣 <strong class="text-amber-400">${bomb}</strong></span>
-                        </div>
-                    `;
-                }
+                row.className = 'flex items-center justify-between p-1.5 rounded-lg bg-slate-950/60 border border-slate-800 text-xs hover:bg-slate-800/40 transition-colors';
 
                 row.innerHTML = `
-                    <div class="flex items-center gap-1 overflow-hidden">
-                        <span class="truncate ${isCurrent ? 'text-amber-400 font-bold' : 'text-slate-200'}">${nick}</span>
+                    <span class="truncate text-slate-200">${nick}</span>
+                    <div class="flex items-center gap-2.5 font-mono text-[11px] shrink-0">
+                        <span class="text-slate-300">🧨 <strong class="text-amber-400">${dyn}</strong></span>
+                        <span class="text-slate-300">💣 <strong class="text-amber-400">${bomb}</strong></span>
                     </div>
-                    ${controlsHtml}
                 `;
                 container.appendChild(row);
             });
@@ -1215,23 +1211,6 @@
             }
         }
 
-        function toggleIamHereMode() {
-            if (!currentPlayer) { alert('⚠ Выберите ник!'); return; }
-            isIamHereModeActive = !isIamHereModeActive;
-            isTargetSelectionActive = false; 
-            document.getElementById('selection-mode-banner').classList.add('hidden');
-            
-            const banner = document.getElementById('iamhere-mode-banner');
-            const btn = document.getElementById('btn-iamhere-mode');
-            if (isIamHereModeActive) {
-                banner.classList.remove('hidden');
-                btn.className = 'bg-amber-600 hover:bg-amber-500 text-white text-xs px-5 py-2.5 rounded-lg font-bold transition-colors shadow-lg flex items-center gap-1.5';
-            } else {
-                banner.classList.add('hidden');
-                btn.className = 'bg-blue-600 hover:bg-blue-500 text-white text-xs px-5 py-2.5 rounded-lg font-bold transition-colors shadow-lg flex items-center gap-1.5';
-            }
-        }
-
         async function setPlayerIamHere(cellId) {
             for (let cId in iamHereState) {
                 iamHereState[cId] = iamHereState[cId].filter(p => p !== currentPlayer);
@@ -1239,10 +1218,6 @@
             }
             if (!iamHereState[cellId]) iamHereState[cellId] = [];
             iamHereState[cellId].push(currentPlayer);
-
-            isIamHereModeActive = false;
-            document.getElementById('iamhere-mode-banner').classList.add('hidden');
-            document.getElementById('btn-iamhere-mode').className = 'bg-blue-600 hover:bg-blue-500 text-white text-xs px-5 py-2.5 rounded-lg font-bold transition-colors shadow-lg flex items-center gap-1.5';
             
             if (supabaseClient) {
                 await supabaseClient.from('iam_here').delete().eq('player_name', currentPlayer);
@@ -1254,6 +1229,12 @@
 
             renderSiege();
             renderCells();
+        }
+
+        function toggleIamHereFromCard() {
+            if (!selectedSiegeCellId) return;
+            setPlayerIamHere(selectedSiegeCellId);
+            openCellCardModal(selectedSiegeCellId);
         }
 
         let activeModalCellId = null;
@@ -1312,6 +1293,7 @@
             renderSiege();
             renderCells();
             if (activeModalCellId) openCellPlayersModal(activeModalCellId);
+            if (selectedSiegeCellId === cellId) openCellCardModal(cellId);
         }
 
         function setViewingPlayer(nick) {
@@ -1424,34 +1406,185 @@
             return val;
         }
 
-        function toggleTargetSelectionMode() {
-            isTargetSelectionActive = !isTargetSelectionActive;
-            isIamHereModeActive = false;
-            document.getElementById('iamhere-mode-banner').classList.add('hidden');
+        /* --- ФУНКЦИОНАЛ МОДАЛЬНОГО ОКНА (КАРТОЧКИ КЛЕТКИ) --- */
 
-            const banner = document.getElementById('selection-mode-banner');
-            const btnSelect = document.getElementById('btn-select-target');
+        function openCellCardModal(cellId) {
+            selectedSiegeCellId = cellId;
+            const cell = CELLS_DATA.find(c => c.id == cellId);
+            if (!cell) return;
 
-            if (isTargetSelectionActive) {
-                banner.classList.remove('hidden');
-                btnSelect.textContent = 'Отменить выбор';
-                btnSelect.className = 'flex-1 text-[11px] bg-red-600 hover:bg-red-500 text-white px-3 py-2 rounded-md font-bold shadow transition-colors text-center';
-            } else {
-                banner.classList.add('hidden');
-                btnSelect.textContent = '🎯 Выбрать цель';
-                btnSelect.className = 'flex-1 text-[11px] bg-amber-600 hover:bg-amber-500 text-white px-3 py-2 rounded-md font-bold shadow transition-colors text-center';
+            const cropDiv = document.getElementById('cell-card-map-crop');
+            if (cropDiv) {
+                cropDiv.style.backgroundPosition = `${cell.x}% ${cell.y}%`;
             }
+
+            document.getElementById('cell-card-name').textContent = cell.name;
+
+            const colorBadge = document.getElementById('cell-card-color-badge');
+            const colorNames = { purple: 'Фиолетовая', blue: 'Синяя', green: 'Зеленая', yellow: 'Желтая' };
+            colorBadge.textContent = colorNames[cell.color] || cell.color;
+
+            const cellOwners = sheltersState[cellId] || [];
+            const sheltersNumEl = document.getElementById('cell-card-shelters-num');
+            if (sheltersNumEl) sheltersNumEl.textContent = cellOwners.length;
+
+            const officerPanel = document.getElementById('cell-card-officer-controls');
+            if (currentUserRole === 'officer') {
+                officerPanel.classList.remove('hidden');
+                updateCardOfficerStatusButtons(cell.id);
+            } else {
+                officerPanel.classList.add('hidden');
+            }
+
+            const missionData = siegeMissionState[cell.id];
+            const cardResInput = document.getElementById('card-mission-resource-input');
+            if (cardResInput) {
+                cardResInput.value = (missionData && typeof missionData === 'object' && missionData.resource) ? missionData.resource : '';
+            }
+
+            const iamHereBtn = document.getElementById('card-iamhere-btn');
+            const playersHere = iamHereState[cell.id] || [];
+            if (playersHere.includes(currentPlayer)) {
+                iamHereBtn.className = 'flex-1 py-2 px-3 rounded-xl bg-green-600 hover:bg-green-500 text-white font-bold text-xs transition-colors shadow flex items-center justify-center gap-1.5';
+                iamHereBtn.textContent = '📍 Вы здесь (Нажмите чтобы снять)';
+            } else {
+                iamHereBtn.className = 'flex-1 py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition-colors shadow flex items-center justify-center gap-1.5';
+                iamHereBtn.textContent = '📍 Я здесь';
+            }
+
+            updateCardDamageDisplay(cell.id);
+            updateCardOwnersList(cell.id);
+
+            document.getElementById('cell-card-modal').classList.remove('hidden');
         }
 
-        function fixTargetDamage() {
-            isTargetSelectionActive = false;
-            document.getElementById('selection-mode-banner').classList.add('hidden');
-            document.getElementById('btn-select-target').textContent = '🎯 Выбрать цель';
-            document.getElementById('btn-select-target').className = 'flex-1 text-[11px] bg-amber-600 hover:bg-amber-500 text-white px-3 py-2 rounded-md font-bold shadow transition-colors text-center';
-            document.getElementById('btn-fix-target').classList.add('hidden');
-            document.getElementById('siege-action-options').classList.add('hidden');
-            alert('✅ Результат осады зафиксирован!');
+        function closeCellCardModal() {
+            document.getElementById('cell-card-modal').classList.add('hidden');
+        }
+
+        function updateCardOfficerStatusButtons(cellId) {
+            const currentStatus = siegeState[cellId] || 0;
+            [0, 1, 2, 3].forEach(st => {
+                const btn = document.getElementById(`btn-status-${st}`);
+                if (!btn) return;
+                if (currentStatus === st) {
+                    btn.classList.add('ring-2', 'ring-white', 'font-black');
+                } else {
+                    btn.classList.remove('ring-2', 'ring-white', 'font-black');
+                }
+            });
+        }
+
+        async function setCellStatusFromCard(status) {
+            if (currentUserRole !== 'officer' || !selectedSiegeCellId) return;
+            
+            if (status === 0) {
+                delete siegeState[selectedSiegeCellId];
+            } else {
+                siegeState[selectedSiegeCellId] = status;
+            }
+
+            if (supabaseClient) {
+                if (status === 0) {
+                    await supabaseClient.from('siege_cell_status')
+                        .delete()
+                        .eq('id', String(selectedSiegeCellId));
+                } else {
+                    const { data: existing, error: selectErr } = await supabaseClient
+                        .from('siege_cell_status')
+                        .select('id')
+                        .eq('id', String(selectedSiegeCellId))
+                        .maybeSingle();
+
+                    if (!selectErr && existing) {
+                        await supabaseClient.from('siege_cell_status')
+                            .update({ 
+                                status: String(status),
+                                updated_by: currentPlayer 
+                            })
+                            .eq('id', existing.id);
+                    } else {
+                        await supabaseClient.from('siege_cell_status')
+                            .insert([{
+                                id: String(selectedSiegeCellId),
+                                status: String(status),
+                                updated_by: currentPlayer 
+                            }]);
+                    }
+                }
+            }
+            updateCardOfficerStatusButtons(selectedSiegeCellId);
             renderSiege();
+        }
+
+        function updateCardDamageDisplay(cellId) {
+            const owners = sheltersState[cellId] || [];
+            const isOwner = owners.includes(currentPlayer);
+            const shelterWrap = document.getElementById('card-shelter-wrap');
+            if (isOwner) shelterWrap.classList.remove('hidden');
+            else shelterWrap.classList.add('hidden');
+
+            const dmg = (siegeDamageState[cellId] && siegeDamageState[cellId][currentPlayer]) || { shelter: 0, dynamite: 0, bomb: 0 };
+            document.getElementById('card-my-dmg-shelter').textContent = formatDamage(dmg.shelter);
+            document.getElementById('card-my-dmg-dynamite').textContent = formatDamage(dmg.dynamite);
+            document.getElementById('card-my-dmg-bomb').textContent = formatDamage(dmg.bomb);
+        }
+
+        function updateCardOwnersList(cellId) {
+            const listEl = document.getElementById('card-siege-owners-list');
+            const totalDmgEl = document.getElementById('cell-card-total-dmg');
+            if (!listEl) return;
+
+            const owners = sheltersState[cellId] || [];
+            const sheltersNumEl = document.getElementById('cell-card-shelters-num');
+            if (sheltersNumEl) sheltersNumEl.textContent = owners.length;
+
+            const cellDamage = siegeDamageState[cellId] || {};
+
+            let totalCellDmg = 0;
+            let activePlayersMap = {};
+            owners.forEach(p => { activePlayersMap[p] = true; });
+            Object.keys(cellDamage).forEach(p => { activePlayersMap[p] = true; });
+            const allInvolved = Object.keys(activePlayersMap);
+
+            allInvolved.forEach(p => {
+                let pDmg = cellDamage[p] || { shelter: 0, dynamite: 0, bomb: 0 };
+                totalCellDmg += (pDmg.shelter || 0) + (pDmg.dynamite || 0) + (pDmg.bomb || 0);
+            });
+
+            if (totalDmgEl) totalDmgEl.textContent = formatDamage(totalCellDmg);
+
+            listEl.innerHTML = '';
+            if (allInvolved.length === 0) {
+                listEl.innerHTML = '<div class="text-slate-500 text-center py-4 text-xs">Никто еще не наносил урон</div>';
+                return;
+            }
+
+            allInvolved.sort((a, b) => {
+                let aDmg = cellDamage[a] ? (cellDamage[a].shelter + cellDamage[a].dynamite + cellDamage[a].bomb) : 0;
+                let bDmg = cellDamage[b] ? (cellDamage[b].shelter + cellDamage[b].dynamite + cellDamage[b].bomb) : 0;
+                return bDmg - aDmg;
+            });
+
+            allInvolved.forEach(nick => {
+                const isOwner = owners.includes(nick);
+                const dmgObj = cellDamage[nick] || { shelter: 0, dynamite: 0, bomb: 0 };
+                const totalDmg = dmgObj.shelter + dmgObj.dynamite + dmgObj.bomb;
+
+                const row = document.createElement('div');
+                row.className = 'flex items-center justify-between p-2 rounded-lg bg-slate-950/80 border border-slate-800 text-slate-200 text-xs';
+                
+                row.innerHTML = `
+                    <div class="flex items-center gap-1.5 overflow-hidden">
+                        <span class="truncate font-medium ${isOwner ? 'text-amber-400' : ''}">${nick}</span>
+                        ${isOwner ? '<span class="text-[9px] bg-amber-900/80 text-amber-200 px-1 py-0.2 rounded shrink-0" title="Владелец убежища">⛺</span>' : ''}
+                    </div>
+                    <div class="flex items-center gap-1.5 shrink-0 font-mono">
+                        <span class="font-bold text-amber-300 text-xs">${formatDamage(totalDmg)}</span>
+                    </div>
+                `;
+                listEl.appendChild(row);
+            });
         }
 
         async function modifyDamage(type, delta) {
@@ -1472,7 +1605,7 @@
             let newVal = currentVal + delta;
             if (newVal < 0) newVal = 0;
 
-            if (type === 'shelter' && newVal > 1000000000) newVal = 1000000000;
+            if (type === 'shelter' && newVal > 2000000000) newVal = 2000000000;
 
             siegeDamageState[selectedSiegeCellId][currentPlayer][type] = newVal;
 
@@ -1497,8 +1630,8 @@
                 }
             }
 
-            updateMyDamageDisplay(selectedSiegeCellId);
-            updateSiegeOwnersList(selectedSiegeCellId);
+            updateCardDamageDisplay(selectedSiegeCellId);
+            updateCardOwnersList(selectedSiegeCellId);
             renderSiege(); 
         }
 
@@ -1517,12 +1650,12 @@
                 delete siegeDamageState[selectedSiegeCellId][currentPlayer];
             }
 
-            updateMyDamageDisplay(selectedSiegeCellId);
-            updateSiegeOwnersList(selectedSiegeCellId);
+            updateCardDamageDisplay(selectedSiegeCellId);
+            updateCardOwnersList(selectedSiegeCellId);
             renderSiege();
         }
 
-        async function clearCellDamage() {
+        async function officerClearCellDamage() {
             if (currentUserRole !== 'officer' || !selectedSiegeCellId) return;
             const cell = CELLS_DATA.find(c => c.id == selectedSiegeCellId);
             if (!confirm(`⚠ ВНИМАНИЕ: Сбросить весь урон ВСЕХ бойцов по клетке "${cell ? cell.name : selectedSiegeCellId}"?`)) return;
@@ -1534,30 +1667,10 @@
             }
 
             delete siegeDamageState[selectedSiegeCellId];
-            updateMyDamageDisplay(selectedSiegeCellId);
-            updateSiegeOwnersList(selectedSiegeCellId);
+            updateCardDamageDisplay(selectedSiegeCellId);
+            updateCardOwnersList(selectedSiegeCellId);
             renderSiege();
             alert('✅ Урон по клетке полностью очищен!');
-        }
-
-        function updateMyDamageDisplay(cellId) {
-            const panel = document.getElementById('my-damage-panel');
-            if (!cellId || !currentPlayer) {
-                panel.classList.add('hidden');
-                return;
-            }
-            panel.classList.remove('hidden');
-
-            const owners = sheltersState[cellId] || [];
-            const isOwner = owners.includes(currentPlayer);
-            const shelterWrap = document.getElementById('opt-shelter-wrap');
-            if (isOwner) shelterWrap.classList.remove('hidden');
-            else shelterWrap.classList.add('hidden');
-
-            const dmg = (siegeDamageState[cellId] && siegeDamageState[cellId][currentPlayer]) || { shelter: 0, dynamite: 0, bomb: 0 };
-            document.getElementById('my-dmg-shelter').textContent = formatDamage(dmg.shelter);
-            document.getElementById('my-dmg-dynamite').textContent = formatDamage(dmg.dynamite);
-            document.getElementById('my-dmg-bomb').textContent = formatDamage(dmg.bomb);
         }
 
         function renderSiege() {
@@ -1579,8 +1692,8 @@
             CELLS_DATA.forEach(cell => {
                 const status = siegeState[cell.id] || 0;
                 const missionData = siegeMissionState[cell.id];
-                const hasMission = !!missionData;
-                const resName = (typeof missionData === 'object' && missionData.resource) ? missionData.resource : '';
+                const hasMission = !!(missionData && typeof missionData === 'object' && missionData.resource && missionData.resource.trim() !== '');
+                const resName = hasMission ? missionData.resource.trim() : '';
 
                 let totalCellDmg = 0;
                 const cellDmgObj = siegeDamageState[cell.id];
@@ -1644,77 +1757,7 @@
                 }
 
                 marker.onclick = async () => {
-                    if (isIamHereModeActive) {
-                        setPlayerIamHere(cell.id);
-                        return;
-                    }
-
-                    if (isTargetSelectionActive) {
-                        selectSiegeCell(cell.id);
-                        document.getElementById('siege-action-options').classList.remove('hidden');
-                        document.getElementById('btn-fix-target').classList.remove('hidden');
-                        isTargetSelectionActive = false;
-                        document.getElementById('selection-mode-banner').classList.add('hidden');
-                        document.getElementById('btn-select-target').textContent = '🎯 Выбрать цель';
-                        document.getElementById('btn-select-target').className = 'flex-1 text-[11px] bg-amber-600 hover:bg-amber-500 text-white px-3 py-2 rounded-md font-bold shadow transition-colors text-center';
-                        return;
-                    }
-
-                    selectSiegeCell(cell.id);
-                    if (currentUserRole === 'officer') {
-                        if (isMissionEditingMode) {
-                            if (siegeMissionState[cell.id]) delete siegeMissionState[cell.id];
-                            else siegeMissionState[cell.id] = { resource: '' };
-                            if (supabaseClient) {
-                                await supabaseClient.from('siege').insert([{
-                                    mission_text: JSON.stringify(siegeMissionState),
-                                    announcement: clanAnnouncement
-                                }]);
-                            }
-                            renderSiege();
-                        } else {
-                            let currentStatus = siegeState[cell.id] || 0;
-                            let nextStatus = (currentStatus + 1) % 4;
-                            
-                            if (nextStatus === 0) {
-                                delete siegeState[cell.id];
-                            } else {
-                                siegeState[cell.id] = nextStatus;
-                            }
-
-                            // Синхронизация статусов с таблицей siege_cell_status (включая updated_by)
-                            if (supabaseClient) {
-                                if (nextStatus === 0) {
-                                    await supabaseClient.from('siege_cell_status')
-                                        .delete()
-                                        .eq('id', String(cell.id));
-                                } else {
-                                    const { data: existing, error: selectErr } = await supabaseClient
-                                        .from('siege_cell_status')
-                                        .select('id')
-                                        .eq('id', String(cell.id))
-                                        .maybeSingle();
-
-                                    if (!selectErr && existing) {
-                                        await supabaseClient.from('siege_cell_status')
-                                            .update({ 
-                                                status: String(nextStatus),
-                                                updated_by: currentPlayer 
-                                            })
-                                            .eq('id', existing.id);
-                                    } else {
-                                        await supabaseClient.from('siege_cell_status')
-                                            .insert([{
-                                                id: String(cell.id),
-                                                status: String(nextStatus),
-                                                updated_by: currentPlayer 
-                                            }]);
-                                    }
-                                }
-                            }
-                            renderSiege();
-                        }
-                    }
+                    openCellCardModal(cell.id);
                 };
 
                 wrapper.appendChild(marker);
@@ -1725,7 +1768,7 @@
                     item.className = `flex items-center justify-between p-1 rounded-lg cursor-pointer border ${
                         selectedSiegeCellId === cell.id ? 'bg-amber-950/60 border-amber-500' : 'bg-slate-950/60 border-slate-800 hover:bg-slate-800/50'
                     }`;
-                    item.onclick = () => selectSiegeCell(cell.id);
+                    item.onclick = () => openCellCardModal(cell.id);
                     item.innerHTML = `
                         <div class="flex items-center gap-1.5 overflow-hidden">
                             <span class="text-slate-200 truncate text-[11px]">${cell.name}</span>
@@ -1746,7 +1789,7 @@
                     mItem.className = `flex items-center justify-between p-1 rounded-lg cursor-pointer border ${
                         selectedSiegeCellId === cell.id ? 'bg-amber-950/60 border-amber-500' : 'bg-slate-950/60 border-amber-600/30 hover:bg-slate-800/50'
                     }`;
-                    mItem.onclick = () => selectSiegeCell(cell.id);
+                    mItem.onclick = () => openCellCardModal(cell.id);
                     mItem.innerHTML = `
                         <div class="flex items-center gap-1.5 overflow-hidden">
                             <span class="text-amber-300 font-bold">🎯</span>
@@ -1763,75 +1806,9 @@
             if (noAttackCount === 0) noAttackContainer.innerHTML = '<span class="text-slate-500 text-[11px]">Нет целей</span>';
             if (missionCount === 0) missionListContainer.innerHTML = '<span class="text-slate-500 text-[11px]">Миссия не задана</span>';
 
-            if (selectedSiegeCellId) updateSiegeOwnersList(selectedSiegeCellId);
-        }
-
-        function selectSiegeCell(cellId) {
-            selectedSiegeCellId = cellId;
-            updateMyDamageDisplay(cellId);
-            updateSiegeOwnersList(cellId);
-            
-            const officerBtn = document.getElementById('officer-clear-cell-btn');
-            if (officerBtn && currentUserRole === 'officer') {
-                officerBtn.classList.remove('hidden');
+            if (selectedSiegeCellId && !document.getElementById('cell-card-modal').classList.contains('hidden')) {
+                updateCardOwnersList(selectedSiegeCellId);
             }
-
-            const missionData = siegeMissionState[cellId];
-            const resInput = document.getElementById('mission-resource-input');
-            if (resInput && missionData) {
-                resInput.value = (typeof missionData === 'object' && missionData.resource) ? missionData.resource : '';
-            } else if (resInput) {
-                resInput.value = '';
-            }
-            renderSiege();
-        }
-
-        function updateSiegeOwnersList(cellId) {
-            const cell = CELLS_DATA.find(c => c.id == cellId);
-            const titleEl = document.getElementById('siege-selected-cell-title');
-            const listEl = document.getElementById('siege-owners-list');
-            if (!cell || !titleEl || !listEl) return;
-            titleEl.textContent = cell.name;
-
-            const owners = sheltersState[cellId] || [];
-            const cellDamage = siegeDamageState[cellId] || {};
-
-            let activePlayersMap = {};
-            owners.forEach(p => { activePlayersMap[p] = true; });
-            Object.keys(cellDamage).forEach(p => { activePlayersMap[p] = true; });
-            const allInvolved = Object.keys(activePlayersMap);
-
-            listEl.innerHTML = '';
-            if (allInvolved.length === 0) {
-                listEl.innerHTML = '<div class="text-slate-500 text-center py-6 text-[11px]">Никто не отметил урон и нет владельцев</div>';
-                return;
-            }
-
-            allInvolved.sort((a, b) => {
-                let aDmg = cellDamage[a] ? (cellDamage[a].shelter + cellDamage[a].dynamite + cellDamage[a].bomb) : 0;
-                let bDmg = cellDamage[b] ? (cellDamage[b].shelter + cellDamage[b].dynamite + cellDamage[b].bomb) : 0;
-                return bDmg - aDmg;
-            });
-
-            allInvolved.forEach(nick => {
-                const isOwner = owners.includes(nick);
-                const dmgObj = cellDamage[nick] || { shelter: 0, dynamite: 0, bomb: 0 };
-                const totalDmg = dmgObj.shelter + dmgObj.dynamite + dmgObj.bomb;
-
-                const row = document.createElement('div');
-                row.className = 'flex items-center justify-between p-1 rounded-lg bg-slate-950/60 border border-slate-800 text-slate-200 text-[11px]';
-                
-                row.innerHTML = `
-                    <div class="flex items-center gap-1 overflow-hidden">
-                        <span class="truncate font-medium ${isOwner ? 'text-amber-400' : ''}">${nick}</span>
-                        ${isOwner ? '<span class="text-[9px] bg-amber-900/80 text-amber-200 px-1 rounded shrink-0" title="Владелец убежища">⛺</span>' : ''}
-                    </div>
-                    <div class="flex items-center gap-1.5 shrink-0 font-mono">
-                        <span class="font-bold text-amber-300 text-xs">${formatDamage(totalDmg)}</span>
-                    </div>
-                `;
-                listEl.appendChild(row);
-            });
         }
 
         function renderApp() {
