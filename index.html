@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Штаб H13 - Карта Осады</title>
+    <!-- Подключаем Telegram WebApp SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Подключаем официальную библиотеку Supabase JS -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -439,7 +441,7 @@
     <!-- МОДАЛЬНОЕ ОКНО ПОДТВЕРЖДЕНИЯ УДАЛЕНИЯ -->
     <div id="confirm-delete-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50 hidden">
         <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl max-w-xs w-full mx-4 shadow-2xl space-y-3 text-center">
-            <h3 class="text-sm font-bold text-red-400">⚠️️ Подтверждение удаления</h3>
+            <h3 class="text-sm font-bold text-red-400">⚠ Подтверждение удаления</h3>
             <p class="text-xs text-slate-300">Вы действительно хотите удалить бойца <strong id="modal-fighter-name" class="text-amber-400"></strong>?</p>
             <div class="flex gap-2 pt-2">
                 <button onclick="closeDeleteModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs py-2 rounded-lg transition-colors font-medium">Отмена</button>
@@ -449,6 +451,13 @@
     </div>
 
     <script>
+        // Инициализация Telegram WebApp
+        let tg = window.Telegram ? window.Telegram.WebApp : null;
+        if (tg) {
+            tg.ready();
+            tg.expand();
+        }
+
         const SUPABASE_URL = 'https://odlxxtzuchpaykttycgi.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_Qo59JT3EGIunTT-XJDvfxw_34sKna-7';
         
@@ -723,11 +732,25 @@
             const select = document.getElementById('profile-selector');
             select.innerHTML = '<option value="">-- Выберите ваш ник --</option>';
             let pool = getAllMembers();
+
+            // Автоматическое сопоставление имени пользователя из Telegram
+            let tgMatch = null;
+            if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                const tgUser = tg.initDataUnsafe.user;
+                const tgUsername = tgUser.username ? tgUser.username.toLowerCase() : '';
+                const tgFirstName = tgUser.first_name ? tgUser.first_name.toLowerCase() : '';
+                
+                tgMatch = pool.find(nick => {
+                    const lowerNick = nick.toLowerCase();
+                    return (tgUsername && lowerNick === tgUsername) || (tgFirstName && lowerNick === tgFirstName);
+                });
+            }
+
             pool.sort().forEach(nick => {
                 const opt = document.createElement('option');
                 opt.value = nick;
                 opt.textContent = nick;
-                if (nick === currentPlayer) opt.selected = true;
+                if (nick === currentPlayer || (tgMatch && nick === tgMatch)) opt.selected = true;
                 select.appendChild(opt);
             });
         }
