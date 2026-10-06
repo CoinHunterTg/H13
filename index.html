@@ -116,6 +116,34 @@
             z-index: 5;
             font-size: 14px;
         }
+
+        /* Стиль выделения клетки при массовом выборе */
+        .siege-cell-selected {
+            border: 3px solid #FACC15 !important;
+            box-shadow: 0 0 16px #FACC15, inset 0 0 8px #FACC15 !important;
+            background-color: rgba(250, 204, 21, 0.35) !important;
+            z-index: 30 !important;
+            animation: selectedPulse 1.5s infinite alternate;
+        }
+
+        @keyframes selectedPulse {
+            0% { box-shadow: 0 0 10px #FACC15, inset 0 0 4px #FACC15; }
+            100% { box-shadow: 0 0 20px #FACC15, inset 0 0 12px #FACC15; }
+        }
+
+        .select-check-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            font-weight: 900;
+            color: #FEF08A;
+            text-shadow: 0 0 6px #000, 0 2px 4px #000;
+            pointer-events: none;
+            z-index: 31;
+        }
         
         #app-background {
             background-size: cover;
@@ -133,7 +161,7 @@
         }
     </style>
 </head>
-<body id="app-background" class="bg-slate-950 text-slate-100 min-h-screen font-sans p-2 md:p-3 pb-10">
+<body id="app-background" class="bg-slate-950 text-slate-100 min-h-screen font-sans p-2 md:p-3 pb-24">
 
     <!-- ЭТАП 1: АВТОРИЗАЦИЯ -->
     <div id="auth-screen" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md flex items-center justify-center z-50">
@@ -192,9 +220,18 @@
             
             <!-- 1. ИГРОВАЯ КАРТА -->
             <div class="bg-slate-900/90 backdrop-blur p-2.5 rounded-xl border border-slate-800 flex flex-col items-center justify-center relative min-h-[520px]">
-                <div class="absolute top-2 left-2 text-[11px] text-slate-300 bg-slate-950/60 px-2 py-0.5 rounded border border-slate-800 z-10" id="siege-role-hint">Режим просмотра</div>
+                
+                <!-- Верхняя панель инструментов карты -->
+                <div class="absolute top-2 left-2 right-2 flex justify-between items-center z-20 pointer-events-none">
+                    <div class="flex items-center gap-2 pointer-events-auto">
+                        <button id="multi-select-toggle-btn" onclick="toggleMultiSelectMode()" class="bg-slate-950/90 hover:bg-amber-900/50 border border-amber-500/50 text-amber-300 px-2.5 py-1 rounded-lg text-xs font-bold shadow flex items-center gap-1.5 transition-all">
+                            <span id="multi-select-icon">☑</span> <span id="multi-select-text">Выбрать земли</span>
+                        </button>
+                    </div>
+                    <div class="text-[11px] text-slate-300 bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800 shadow pointer-events-auto" id="siege-role-hint">Режим просмотра</div>
+                </div>
 
-                <div id="siege-map-container" class="relative w-full max-w-[480px]" style="aspect-ratio: 594 / 865;">
+                <div id="siege-map-container" class="relative w-full max-w-[480px] mt-6" style="aspect-ratio: 594 / 865;">
                     <img src="map.png" class="absolute inset-0 w-full h-full object-contain rounded-lg shadow-2xl" alt="Карта" onerror="this.style.display='none'">
                     <div id="siege-cells-layer" class="absolute inset-0"></div>
                 </div>
@@ -241,7 +278,17 @@
                 </div>
             </div>
 
-            <!-- 4. ПОЛЕ ЗАМЕТКИ -->
+            <!-- 4. РЕГИСТРАЦИЯ УРОНА -->
+            <div class="bg-slate-900/90 backdrop-blur p-2.5 rounded-xl border border-slate-800 flex flex-col min-h-[180px] max-h-[300px]">
+                <h2 class="text-xs font-semibold text-slate-200 mb-1.5 pb-1.5 border-b border-slate-800 flex items-center justify-between">
+                    <span>⚔️ Регистрация урона</span>
+                </h2>
+                <div id="siege-damage-registration-list" class="overflow-y-auto flex-1 space-y-1 text-xs pr-1">
+                    <div class="text-slate-500 text-center py-6 text-[11px]">Регистраций пока нет</div>
+                </div>
+            </div>
+
+            <!-- 5. ПОЛЕ ЗАМЕТКИ -->
             <div class="bg-slate-900/90 backdrop-blur p-2.5 rounded-xl border border-slate-800">
                 <div class="flex items-center justify-between mb-1.5 pb-1.5 border-b border-slate-800">
                     <span class="text-xs font-bold text-amber-400 uppercase tracking-wider">📢 Заметки</span>
@@ -311,6 +358,32 @@
                     </button>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- ВСПЛЫВАЮЩАЯ НИЖНЯЯ ПАНЕЛЬ МУЛЬТИ-ВЫБОРА (ACTION BAR) -->
+    <div id="multi-select-bar" class="fixed bottom-3 left-1/2 -translate-x-1/2 w-11/12 max-w-xl bg-slate-900/95 backdrop-blur-md border border-amber-500/70 rounded-2xl p-3 shadow-2xl z-40 transition-all duration-300 transform translate-y-32 opacity-0 pointer-events-none flex flex-col gap-2">
+        <div class="flex justify-between items-start gap-2 border-b border-slate-800 pb-2">
+            <div>
+                <div class="text-xs font-bold text-amber-400 flex items-center gap-1.5">
+                    <span>🎯 Выбрано клеток:</span>
+                    <span id="selected-cells-count" class="bg-amber-500 text-slate-950 px-1.5 py-0.2 rounded font-black text-xs">0</span>
+                    <span id="selected-cells-names-inline" class="text-slate-300 font-normal truncate max-w-[200px] text-[11px]">()</span>
+                </div>
+                <div class="text-[11px] text-slate-300 truncate max-w-md mt-0.5" id="selected-players-preview">
+                    Игроки: -
+                </div>
+            </div>
+            <button onclick="clearSelectedCells()" class="text-[11px] text-slate-400 hover:text-red-400 underline shrink-0">Очистить</button>
+        </div>
+        
+        <div class="flex gap-2">
+            <button onclick="copyAttackPlanTemplate()" class="flex-1 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs py-2 px-3 rounded-xl transition-all shadow flex items-center justify-center gap-1.5 active:scale-95">
+                📋 Скопировать план атаки
+            </button>
+            <button onclick="clearSelectedCells()" class="bg-slate-800 hover:bg-slate-700 text-red-300 font-semibold text-xs py-2 px-3 rounded-xl transition-colors">
+                ❌ Сбросить
+            </button>
         </div>
     </div>
 
@@ -509,8 +582,10 @@
         let siegeState = {}; 
         let siegeMissionState = {}; 
         let siegeDamageState = {}; 
+        let siegeDamageTimestamps = {};
         let arsenalState = {}; 
-        let iamHereState = {}; 
+        let iamHereState = {};
+        let iamHereTimestamps = {}; 
         
         let clanAnnouncement = 'Привет бойцам! Сверяем точки по плану.';
         let customBgUrl = localStorage.getItem('proto_custom_bg_v1') || '';
@@ -519,6 +594,10 @@
         let currentUserRole = localStorage.getItem('proto_auth_role') || '';
         let viewingPlayer = '';
         let selectedSiegeCellId = null;
+
+        // --- СОСТОЯНИЕ МУЛЬТИ-ВЫБОРА ---
+        let isSelectMode = false;
+        let selectedCells = [];
 
         function getAllMembers() {
             return dynamicMembers.map(f => f.name);
@@ -623,6 +702,9 @@
                         if (!siegeDamageState[cellId]) siegeDamageState[cellId] = {};
                         if (!siegeDamageState[cellId][player]) siegeDamageState[cellId][player] = { shelter: 0, dynamite: 0, bomb: 0 };
                         siegeDamageState[cellId][player][type] = amount;
+                        if (!siegeDamageTimestamps[cellId]) siegeDamageTimestamps[cellId] = {};
+                        if (!siegeDamageTimestamps[cellId][player]) siegeDamageTimestamps[cellId][player] = {};
+                        siegeDamageTimestamps[cellId][player][type] = row.created_at;
                     });
                 }
 
@@ -646,6 +728,8 @@
                         if (cellId && player) {
                             if (!iamHereState[cellId]) iamHereState[cellId] = [];
                             if (!iamHereState[cellId].includes(player)) iamHereState[cellId].push(player);
+                            if (!iamHereTimestamps[cellId]) iamHereTimestamps[cellId] = {};
+                            iamHereTimestamps[cellId][player] = row.created_at;
                         }
                     });
                 }
@@ -733,7 +817,6 @@
             select.innerHTML = '<option value="">-- Выберите ваш ник --</option>';
             let pool = getAllMembers();
 
-            // Автоматическое сопоставление имени пользователя из Telegram
             let tgMatch = null;
             if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
                 const tgUser = tg.initDataUnsafe.user;
@@ -812,7 +895,7 @@
                 badge.className = 'text-xs px-2.5 py-1 rounded bg-slate-900 border border-slate-800 text-slate-300';
                 badge.textContent = '🔒 Участник';
                 resetBtn.classList.add('hidden');
-                hint.textContent = 'Участник: свои точки';
+                hint.textContent = 'Участник: отметьте свои убежища';
                 siegeHint.textContent = '🔒 Нажмите на клетку для отображения карточки';
                 annActions.classList.add('hidden');
                 annActions.classList.remove('flex');
@@ -881,6 +964,152 @@
                     renderApp();
                 })
                 .subscribe();
+        }
+
+        function renderApp() {
+            renderPlayersList();
+            renderSiege();
+            renderCells();
+            updateMultiSelectBar();
+        }
+
+        /* --- МЕХАНИКА МУЛЬТИ-ВЫБОРА КЛЕТОК И СБОРКА ПЛАНА АТАКИ --- */
+
+        function toggleMultiSelectMode() {
+            isSelectMode = !isSelectMode;
+            const toggleBtn = document.getElementById('multi-select-toggle-btn');
+            const iconEl = document.getElementById('multi-select-icon');
+            const textEl = document.getElementById('multi-select-text');
+
+            if (isSelectMode) {
+                toggleBtn.className = 'bg-amber-500 text-slate-950 font-black px-2.5 py-1 rounded-lg text-xs shadow-lg flex items-center gap-1.5 transition-all ring-2 ring-amber-300';
+                iconEl.textContent = '✅';
+                textEl.textContent = 'Режим выбора ВКЛ';
+            } else {
+                toggleBtn.className = 'bg-slate-950/90 hover:bg-amber-900/50 border border-amber-500/50 text-amber-300 px-2.5 py-1 rounded-lg text-xs font-bold shadow flex items-center gap-1.5 transition-all';
+                iconEl.textContent = '☑';
+                textEl.textContent = 'Выбрать земли';
+            }
+
+            renderSiege();
+            updateMultiSelectBar();
+        }
+
+        function toggleCellSelection(cellId) {
+            const index = selectedCells.indexOf(cellId);
+            if (index > -1) {
+                selectedCells.splice(index, 1);
+            } else {
+                selectedCells.push(cellId);
+            }
+            renderSiege();
+            updateMultiSelectBar();
+        }
+
+        function clearSelectedCells() {
+            selectedCells = [];
+            renderSiege();
+            updateMultiSelectBar();
+        }
+
+        function getSelectedCellsData() {
+            return selectedCells.map(id => CELLS_DATA.find(c => c.id == id)).filter(Boolean);
+        }
+
+        function getPlayersForSelectedCells() {
+            let playerCounts = {};
+            selectedCells.forEach(cellId => {
+                const owners = sheltersState[cellId] || [];
+                owners.forEach(p => {
+                    playerCounts[p] = (playerCounts[p] || 0) + 1;
+                });
+            });
+
+            // Преобразуем в массив объектов и сортируем по убыванию количества убежищ
+            let sortedPlayers = Object.keys(playerCounts).map(player => {
+                return { name: player, count: playerCounts[player] };
+            }).sort((a, b) => b.count - a.count);
+
+            return sortedPlayers;
+        }
+
+        function updateMultiSelectBar() {
+            const bar = document.getElementById('multi-select-bar');
+            const countEl = document.getElementById('selected-cells-count');
+            const namesEl = document.getElementById('selected-cells-names-inline');
+            const previewEl = document.getElementById('selected-players-preview');
+
+            if (!bar) return;
+
+            if (selectedCells.length > 0) {
+                bar.classList.remove('translate-y-32', 'opacity-0', 'pointer-events-none');
+                bar.classList.add('translate-y-0', 'opacity-100', 'pointer-events-auto');
+
+                countEl.textContent = selectedCells.length;
+                const selCells = getSelectedCellsData();
+                namesEl.textContent = `(${selCells.map(c => c.name).join(', ')})`;
+
+                const sortedPlayers = getPlayersForSelectedCells();
+                if (sortedPlayers.length > 0) {
+                    const formattedNicks = sortedPlayers.map(p => `@${p.name}${p.count > 1 ? ` (${p.count} ⛺)` : ''}`).join(', ');
+                    previewEl.innerHTML = `<strong class="text-amber-300">Игроки:</strong> ${formattedNicks}`;
+                } else {
+                    previewEl.innerHTML = `<span class="text-slate-500">Нет зарегистрированных убежищ</span>`;
+                }
+            } else {
+                bar.classList.add('translate-y-32', 'opacity-0', 'pointer-events-none');
+                bar.classList.remove('translate-y-0', 'opacity-100', 'pointer-events-auto');
+            }
+        }
+
+        async function copyAttackPlanTemplate() {
+            if (selectedCells.length === 0) return;
+
+            const selectedData = getSelectedCellsData();
+            
+            // Группировка выбранных клеток по очередям
+            const p1Cells = selectedData.filter(c => (siegeState[c.id] || 0) === 1);
+            const p2Cells = selectedData.filter(c => (siegeState[c.id] || 0) === 2);
+            const otherCells = selectedData.filter(c => (siegeState[c.id] || 0) !== 1 && (siegeState[c.id] || 0) !== 2);
+
+            let attackTargetText = selectedData.map(c => c.name).join(', ');
+
+            // Сборка списка игроков без дублей, сортировка от большего количества убежищ
+            const sortedPlayers = getPlayersForSelectedCells();
+            const forcesText = sortedPlayers.length > 0 
+                ? sortedPlayers.map(p => `@${p.name}${p.count > 1 ? ` (⛺: ${p.count})` : ''}`).join('\n')
+                : 'Не назначены';
+
+            let attackTargetsBlock = `🔴 ЦЕЛЬ АТАКИ:\n`;
+
+            let queueDetailsBlock = `🎯 1-я очередь:\n`;
+            if (p1Cells.length > 0) {
+                p1Cells.forEach((c, idx) => { queueDetailsBlock += `${idx + 1}. ${c.name}\n`; });
+            } else {
+                queueDetailsBlock += `- Нет целей\n`;
+            }
+
+            queueDetailsBlock += `\n⚡ 2-я очередь:\n`;
+            if (p2Cells.length > 0) {
+                p2Cells.forEach((c, idx) => { queueDetailsBlock += `${idx + 1}. ${c.name}\n`; });
+            } else {
+                queueDetailsBlock += `- Нет целей\n`;
+            }
+
+            if (otherCells.length > 0) {
+                queueDetailsBlock += `\n📌 Прочие цели:\n`;
+                otherCells.forEach((c, idx) => { queueDetailsBlock += `${idx + 1}. ${c.name}\n`; });
+            }
+
+            const templateText = `**Сводка штаба H13**\n\n${attackTargetsBlock}${queueDetailsBlock}\n⚔️ СИЛЫ ОСАДЫ\n${forcesText}`;
+
+            try {
+                await navigator.clipboard.writeText(templateText);
+                alert('✅ План атаки скопирован в буфер обмена!\n\n' + templateText);
+            } catch (err) {
+                console.error('Ошибка копирования:', err);
+                prompt('Скопируйте план атаки вручную:', templateText);
+            }
         }
 
         async function addFighter() {
@@ -1238,16 +1467,28 @@
             for (let cId in iamHereState) {
                 iamHereState[cId] = iamHereState[cId].filter(p => p !== currentPlayer);
                 if (iamHereState[cId].length === 0) delete iamHereState[cId];
+                if (iamHereTimestamps[cId]) {
+                    delete iamHereTimestamps[cId][currentPlayer];
+                    if (Object.keys(iamHereTimestamps[cId]).length === 0) delete iamHereTimestamps[cId];
+                }
             }
             if (!iamHereState[cellId]) iamHereState[cellId] = [];
+            if (!iamHereTimestamps[cellId]) iamHereTimestamps[cellId] = {};
             iamHereState[cellId].push(currentPlayer);
-            
+
+            const localCreatedAt = new Date().toISOString();
+            iamHereTimestamps[cellId][currentPlayer] = localCreatedAt;
+
             if (supabaseClient) {
                 await supabaseClient.from('iam_here').delete().eq('player_name', currentPlayer);
-                await supabaseClient.from('iam_here').insert([{
+                const { data: insertedRows } = await supabaseClient.from('iam_here').insert([{
                     cell_id: String(cellId),
                     player_name: currentPlayer
-                }]);
+                }]).select('created_at').single();
+
+                if (insertedRows && insertedRows.created_at) {
+                    iamHereTimestamps[cellId][currentPlayer] = insertedRows.created_at;
+                }
             }
 
             renderSiege();
@@ -1260,13 +1501,27 @@
             openCellCardModal(selectedSiegeCellId);
         }
 
+        function formatIamHereDuration(createdAt) {
+            if (!createdAt) return '0 ч 0 мин';
+            const startedAt = new Date(createdAt).getTime();
+            if (!Number.isFinite(startedAt)) return '0 ч 0 мин';
+
+            const elapsedMinutes = Math.max(0, Math.floor((Date.now() - startedAt) / 60000));
+            const hours = Math.floor(elapsedMinutes / 60);
+            const minutes = elapsedMinutes % 60;
+            return `${hours} ч ${minutes} мин`;
+        }
+
         let activeModalCellId = null;
-        function openCellPlayersModal(cellId) {
-            activeModalCellId = cellId;
-            const cell = CELLS_DATA.find(c => c.id == cellId);
-            const players = iamHereState[cellId] || [];
-            
-            document.getElementById('cell-modal-title').textContent = `👥 Игроки на клетке: ${cell ? cell.name : cellId}`;
+        let cellPlayersModalTimer = null;
+
+        function renderCellPlayersModal() {
+            if (!activeModalCellId) return;
+
+            const cell = CELLS_DATA.find(c => c.id == activeModalCellId);
+            const players = iamHereState[activeModalCellId] || [];
+
+            document.getElementById('cell-modal-title').textContent = `👥 Игроки на клетке: ${cell ? cell.name : activeModalCellId}`;
             const listEl = document.getElementById('cell-modal-players-list');
             listEl.innerHTML = '';
 
@@ -1277,19 +1532,34 @@
                     const isMyPos = (p === currentPlayer);
                     const row = document.createElement('div');
                     row.className = 'flex items-center justify-between p-1.5 bg-slate-950/80 rounded border border-slate-800';
-                    
+
                     let removeBtnHtml = '';
                     if (currentUserRole === 'officer' || isMyPos) {
-                        removeBtnHtml = `<button onclick="removeIamHerePlayer(${cellId}, '${p}')" class="text-[10px] bg-red-950 hover:bg-red-900 text-red-300 border border-red-800 px-2 py-0.5 rounded font-bold">✕ Убрать</button>`;
+                        removeBtnHtml = `<button onclick="removeIamHerePlayer(${activeModalCellId}, '${p}')" class="text-[10px] bg-red-950 hover:bg-red-900 text-red-300 border border-red-800 px-2 py-0.5 rounded font-bold">✕ Убрать</button>`;
                     }
+
+                    const duration = formatIamHereDuration(
+                        iamHereTimestamps[activeModalCellId] ? iamHereTimestamps[activeModalCellId][p] : null
+                    );
 
                     row.innerHTML = `
                         <span class="${isMyPos ? 'text-amber-400 font-bold' : 'text-slate-200'}">${p} ${isMyPos ? '(Вы)' : ''}</span>
+                        <span class="text-[10px] text-slate-400 font-mono whitespace-nowrap mr-1" title="Время на клетке">⏱ ${duration}</span>
                         ${removeBtnHtml}
                     `;
                     listEl.appendChild(row);
                 });
             }
+        }
+
+        function openCellPlayersModal(cellId) {
+            activeModalCellId = cellId;
+            renderCellPlayersModal();
+
+            if (cellPlayersModalTimer) clearInterval(cellPlayersModalTimer);
+            cellPlayersModalTimer = setInterval(() => {
+                if (activeModalCellId) renderCellPlayersModal();
+            }, 60000);
 
             document.getElementById('cell-players-modal').classList.remove('hidden');
         }
@@ -1297,6 +1567,10 @@
         function closeCellPlayersModal() {
             document.getElementById('cell-players-modal').classList.add('hidden');
             activeModalCellId = null;
+            if (cellPlayersModalTimer) {
+                clearInterval(cellPlayersModalTimer);
+                cellPlayersModalTimer = null;
+            }
         }
 
         async function removeIamHerePlayer(cellId, nick) {
@@ -1307,6 +1581,10 @@
             if (iamHereState[cellId]) {
                 iamHereState[cellId] = iamHereState[cellId].filter(p => p !== nick);
                 if (iamHereState[cellId].length === 0) delete iamHereState[cellId];
+            }
+            if (iamHereTimestamps[cellId]) {
+                delete iamHereTimestamps[cellId][nick];
+                if (Object.keys(iamHereTimestamps[cellId]).length === 0) delete iamHereTimestamps[cellId];
             }
 
             if (supabaseClient) {
@@ -1610,6 +1888,90 @@
             });
         }
 
+        function formatDamageRegistrationTime(createdAt) {
+            if (!createdAt) return '—';
+            const date = new Date(createdAt);
+            if (!Number.isFinite(date.getTime())) return '—';
+
+            return date.toLocaleString('ru-RU', {
+                day: '2-digit',
+                month: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            }).replace(',', '');
+        }
+
+        function renderDamageRegistrations() {
+            const listEl = document.getElementById('siege-damage-registration-list');
+            if (!listEl) return;
+
+            const registrations = [];
+            const typeInfo = {
+                shelter: { label: 'Убежище', icon: '⛺' },
+                dynamite: { label: 'Динамит', icon: '🧨' },
+                bomb: { label: 'Бомба', icon: '💣' }
+            };
+
+            Object.keys(siegeDamageState).forEach(cellId => {
+                const cell = CELLS_DATA.find(c => c.id == cellId);
+                const cellName = cell ? cell.name : cellId;
+                const players = siegeDamageState[cellId] || {};
+
+                Object.keys(players).forEach(player => {
+                    const damage = players[player] || {};
+                    Object.keys(typeInfo).forEach(type => {
+                        if ((damage[type] || 0) <= 0) return;
+
+                        const info = typeInfo[type];
+                        const createdAt = siegeDamageTimestamps[cellId] &&
+                            siegeDamageTimestamps[cellId][player] &&
+                            siegeDamageTimestamps[cellId][player][type];
+
+                        registrations.push({
+                            cellId,
+                            cellName,
+                            player,
+                            type,
+                            label: info.label,
+                            icon: info.icon,
+                            amount: damage[type] || 0,
+                            createdAt
+                        });
+                    });
+                });
+            });
+
+            registrations.sort((a, b) => {
+                const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                return timeB - timeA;
+            });
+
+            listEl.innerHTML = '';
+
+            if (registrations.length === 0) {
+                listEl.innerHTML = '<div class="text-slate-500 text-center py-6 text-[11px]">Регистраций пока нет</div>';
+                return;
+            }
+
+            registrations.forEach(reg => {
+                const row = document.createElement('div');
+                row.className = 'flex items-center justify-between gap-2 p-1.5 rounded-lg bg-slate-950/80 border border-slate-800';
+                row.innerHTML = `
+                    <div class="min-w-0 flex items-center gap-1.5">
+                        <span class="text-slate-200 font-medium truncate" title="${reg.player}">${reg.player}</span>
+                        <span class="text-slate-500 shrink-0">→</span>
+                        <span class="text-slate-300 truncate" title="${reg.cellName}">${reg.cellName}</span>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0 font-mono">
+                        <span class="text-amber-300" title="Тип урона">${reg.icon} ${reg.label}</span>
+                        <span class="text-slate-400 text-[10px] whitespace-nowrap" title="Время регистрации">🕐 ${formatDamageRegistrationTime(reg.createdAt)}</span>
+                    </div>
+                `;
+                listEl.appendChild(row);
+            });
+        }
+
         async function modifyDamage(type, delta) {
             if (!selectedSiegeCellId || !currentPlayer) return;
             
@@ -1630,27 +1992,54 @@
 
             if (type === 'shelter' && newVal > 2000000000) newVal = 2000000000;
 
-            siegeDamageState[selectedSiegeCellId][currentPlayer][type] = newVal;
+            if (newVal === 0) {
+                delete siegeDamageState[selectedSiegeCellId][currentPlayer][type];
+                if (siegeDamageTimestamps[selectedSiegeCellId] &&
+                    siegeDamageTimestamps[selectedSiegeCellId][currentPlayer]) {
+                    delete siegeDamageTimestamps[selectedSiegeCellId][currentPlayer][type];
+                }
+            } else {
+                siegeDamageState[selectedSiegeCellId][currentPlayer][type] = newVal;
+            }
 
             if (supabaseClient) {
                 const { data: existing, error: selectErr } = await supabaseClient
                     .from('siege_damage')
-                    .select('id')
+                    .select('id, created_at')
                     .eq('cell_id', String(selectedSiegeCellId))
                     .eq('player_name', currentPlayer)
                     .eq('damage_type', type)
                     .maybeSingle();
 
-                if (!selectErr && existing) {
+                if (newVal === 0) {
+                    if (!selectErr && existing) {
+                        await supabaseClient.from('siege_damage').delete().eq('id', existing.id);
+                    }
+                } else if (!selectErr && existing) {
+                    if (!siegeDamageTimestamps[selectedSiegeCellId]) siegeDamageTimestamps[selectedSiegeCellId] = {};
+                    if (!siegeDamageTimestamps[selectedSiegeCellId][currentPlayer]) siegeDamageTimestamps[selectedSiegeCellId][currentPlayer] = {};
+                    siegeDamageTimestamps[selectedSiegeCellId][currentPlayer][type] = existing.created_at;
                     await supabaseClient.from('siege_damage').update({ amount: newVal }).eq('id', existing.id);
                 } else {
-                    await supabaseClient.from('siege_damage').insert([{
+                    const { data: inserted, error: insertErr } = await supabaseClient.from('siege_damage').insert([{
                         cell_id: String(selectedSiegeCellId),
                         player_name: currentPlayer,
                         damage_type: type,
                         amount: newVal
-                    }]);
+                    }]).select('created_at').single();
+
+                    if (!insertErr) {
+                        if (!siegeDamageTimestamps[selectedSiegeCellId]) siegeDamageTimestamps[selectedSiegeCellId] = {};
+                        if (!siegeDamageTimestamps[selectedSiegeCellId][currentPlayer]) siegeDamageTimestamps[selectedSiegeCellId][currentPlayer] = {};
+                        siegeDamageTimestamps[selectedSiegeCellId][currentPlayer][type] = inserted && inserted.created_at ? inserted.created_at : new Date().toISOString();
+                    }
                 }
+            }
+
+            if (newVal === 0 && siegeDamageState[selectedSiegeCellId][currentPlayer] &&
+                Object.values(siegeDamageState[selectedSiegeCellId][currentPlayer]).every(v => !v || v <= 0)) {
+                delete siegeDamageState[selectedSiegeCellId][currentPlayer];
+                if (siegeDamageTimestamps[selectedSiegeCellId]) delete siegeDamageTimestamps[selectedSiegeCellId][currentPlayer];
             }
 
             updateCardDamageDisplay(selectedSiegeCellId);
@@ -1672,6 +2061,9 @@
             if (siegeDamageState[selectedSiegeCellId]) {
                 delete siegeDamageState[selectedSiegeCellId][currentPlayer];
             }
+            if (siegeDamageTimestamps[selectedSiegeCellId]) {
+                delete siegeDamageTimestamps[selectedSiegeCellId][currentPlayer];
+            }
 
             updateCardDamageDisplay(selectedSiegeCellId);
             updateCardOwnersList(selectedSiegeCellId);
@@ -1690,6 +2082,7 @@
             }
 
             delete siegeDamageState[selectedSiegeCellId];
+            delete siegeDamageTimestamps[selectedSiegeCellId];
             updateCardDamageDisplay(selectedSiegeCellId);
             updateCardOwnersList(selectedSiegeCellId);
             renderSiege();
@@ -1709,11 +2102,13 @@
             p2Container.innerHTML = '';
             noAttackContainer.innerHTML = '';
             missionListContainer.innerHTML = '';
+            renderDamageRegistrations();
 
             let p1Count = 0, p2Count = 0, noAttackCount = 0, missionCount = 0;
 
             CELLS_DATA.forEach(cell => {
                 const status = siegeState[cell.id] || 0;
+                const isSelected = selectedCells.includes(cell.id);
                 const missionData = siegeMissionState[cell.id];
                 const hasMission = !!(missionData && typeof missionData === 'object' && missionData.resource && missionData.resource.trim() !== '');
                 const resName = hasMission ? missionData.resource.trim() : '';
@@ -1762,12 +2157,26 @@
                     wrapper.appendChild(flagBadge);
                 }
 
-                if (status === 1) { marker.className = 'siege-marker siege-p1'; marker.innerHTML = innerHtmlContent; }
-                else if (status === 2) { marker.className = 'siege-marker siege-p2'; marker.innerHTML = innerHtmlContent; }
-                else if (status === 3) { marker.className = 'siege-marker siege-no-attack'; marker.innerHTML = innerHtmlContent; }
-                else { 
-                    marker.className = 'siege-marker siege-neutral'; 
-                    marker.innerHTML = totalCellDmg > 0 ? `<span class="text-[12px] md:text-[13px] font-mono font-black text-amber-300 bg-slate-950/90 px-1.5 py-0.5 rounded shadow">${formatDamage(totalCellDmg)}</span>` : ''; 
+                // Логика базовых классов плашки
+                let baseClass = 'siege-marker ';
+                if (status === 1) baseClass += 'siege-p1';
+                else if (status === 2) baseClass += 'siege-p2';
+                else if (status === 3) baseClass += 'siege-no-attack';
+                else baseClass += 'siege-neutral';
+
+                // Оверлей выделения при мульти-выборе
+                if (isSelected) {
+                    baseClass += ' siege-cell-selected';
+                    const checkOverlay = document.createElement('div');
+                    checkOverlay.className = 'select-check-overlay';
+                    checkOverlay.innerText = '☑';
+                    wrapper.appendChild(checkOverlay);
+                }
+
+                marker.className = baseClass;
+                marker.innerHTML = (status === 0 && totalCellDmg === 0) ? '' : innerHtmlContent;
+                if (status === 0 && totalCellDmg > 0) {
+                    marker.innerHTML = `<span class="text-[12px] md:text-[13px] font-mono font-black text-amber-300 bg-slate-950/90 px-1.5 py-0.5 rounded shadow">${formatDamage(totalCellDmg)}</span>`;
                 }
                 
                 marker.title = `${cell.name}` + (totalCellDmg > 0 ? `\nОбщий урон: ${formatDamage(totalCellDmg)}` : '');
@@ -1779,8 +2188,14 @@
                     wrapper.appendChild(missionBadge);
                 }
 
-                marker.onclick = async () => {
-                    openCellCardModal(cell.id);
+                // Клик по клетке на карте
+                marker.onclick = (e) => {
+                    e.stopPropagation();
+                    if (isSelectMode) {
+                        toggleCellSelection(cell.id);
+                    } else {
+                        openCellCardModal(cell.id);
+                    }
                 };
 
                 wrapper.appendChild(marker);
@@ -1791,7 +2206,13 @@
                     item.className = `flex items-center justify-between p-1 rounded-lg cursor-pointer border ${
                         selectedSiegeCellId === cell.id ? 'bg-amber-950/60 border-amber-500' : 'bg-slate-950/60 border-slate-800 hover:bg-slate-800/50'
                     }`;
-                    item.onclick = () => openCellCardModal(cell.id);
+                    item.onclick = () => {
+                        if (isSelectMode) {
+                            toggleCellSelection(cell.id);
+                        } else {
+                            openCellCardModal(cell.id);
+                        }
+                    };
                     item.innerHTML = `
                         <div class="flex items-center gap-1.5 overflow-hidden">
                             <span class="text-slate-200 truncate text-[11px]">${cell.name}</span>
@@ -1815,10 +2236,9 @@
                     mItem.onclick = () => openCellCardModal(cell.id);
                     mItem.innerHTML = `
                         <div class="flex items-center gap-1.5 overflow-hidden">
-                            <span class="text-amber-300 font-bold">🎯</span>
-                            <span class="text-white truncate text-[11px]">${cell.name} ${resName ? '('+resName+')' : ''}</span>
+                            <span class="text-amber-300 font-bold">🎯 ${cell.name}</span>
                         </div>
-                        ${totalCellDmg > 0 ? `<span class="text-[10px] font-mono font-bold text-amber-300">${formatDamage(totalCellDmg)}</span>` : ''}
+                        <span class="text-[10px] text-amber-200 font-medium bg-amber-950 px-1.5 py-0.5 rounded border border-amber-800">${resName}</span>
                     `;
                     missionListContainer.appendChild(mItem);
                 }
@@ -1828,31 +2248,10 @@
             if (p2Count === 0) p2Container.innerHTML = '<span class="text-slate-500 text-[11px]">Нет целей</span>';
             if (noAttackCount === 0) noAttackContainer.innerHTML = '<span class="text-slate-500 text-[11px]">Нет целей</span>';
             if (missionCount === 0) missionListContainer.innerHTML = '<span class="text-slate-500 text-[11px]">Миссия не задана</span>';
-
-            if (selectedSiegeCellId && !document.getElementById('cell-card-modal').classList.contains('hidden')) {
-                updateCardOwnersList(selectedSiegeCellId);
-            }
         }
 
-        function renderApp() {
-            renderPlayersList();
-            renderSiege();
-        }
-
-        window.onload = () => checkAuthOnLoad();
-
-        async function resetData() {
-            if (currentUserRole !== 'officer') return;
-            if (confirm('⚠ ВНИМАНИЕ! Это действие очистит ВСЕ отметки убежищ в общей базе. Вы уверены?')) {
-                if (supabaseClient) {
-                    await supabaseClient.from('shelters').delete().neq('id', 0);
-                }
-                sheltersState = {};
-                clearViewingPlayer();
-                renderCells();
-                renderPlayersList();
-            }
-        }
+        // Старт работы при загрузке страницы
+        window.addEventListener('DOMContentLoaded', checkAuthOnLoad);
     </script>
 </body>
 </html>
