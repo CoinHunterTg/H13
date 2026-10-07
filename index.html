@@ -273,6 +273,11 @@
                 <h2 class="text-xs font-semibold text-slate-200 mb-1.5 pb-1.5 border-b border-slate-800 flex items-center justify-between">
                     <span>📦 Арсенал</span>
                 </h2>
+                <div id="arsenal-officer-search" class="hidden mb-1.5">
+                    <input id="arsenal-player-search" type="text" placeholder="🔎 Найти игрока..." autocomplete="off"
+                        oninput="arsenalSearchQuery = this.value.trim().toLowerCase(); renderArsenalList();"
+                        class="w-full bg-slate-950/80 border border-slate-700 focus:border-amber-500/70 outline-none rounded-lg px-2.5 py-1.5 text-xs text-slate-200 placeholder-slate-500">
+                </div>
                 <div id="arsenal-list" class="overflow-y-auto flex-1 space-y-1 text-xs pr-1">
                     <div class="text-slate-500 text-center py-6 text-[11px]">Загрузка арсенала...</div>
                 </div>
@@ -1364,13 +1369,70 @@
         }
 
         /* --- БЛОК АРСЕНАЛА --- */
+        let arsenalSearchQuery = '';
+
+        function isStaffUser() {
+            return currentUserRole === 'officer' || currentUserRole === 'leader';
+        }
+
         function renderArsenalList() {
             const container = document.getElementById('arsenal-list');
+            const searchWrap = document.getElementById('arsenal-officer-search');
             if (!container) return;
-            container.innerHTML = '';
 
+            const isStaff = isStaffUser();
+            if (searchWrap) {
+                searchWrap.classList.toggle('hidden', !isStaff);
+            }
+
+            container.innerHTML = '';
             const allMembers = getAllMembers();
 
+            if (isStaff) {
+                const query = arsenalSearchQuery || '';
+                let members = allMembers.filter(nick => nick.toLowerCase().includes(query));
+
+                members.sort((a, b) => {
+                    let aData = arsenalState[a] || { dynamite: 0, bomb: 0 };
+                    let bData = arsenalState[b] || { dynamite: 0, bomb: 0 };
+                    let aVal = (aData.dynamite || 0) * 10000 + (aData.bomb || 0);
+                    let bVal = (bData.dynamite || 0) * 10000 + (bData.bomb || 0);
+                    return bVal - aVal || a.localeCompare(b);
+                });
+
+                if (members.length === 0) {
+                    container.innerHTML = '<div class="text-slate-500 text-center py-4 text-[11px]">Игрок не найден</div>';
+                    return;
+                }
+
+                members.forEach(nick => {
+                    const data = arsenalState[nick] || { dynamite: 0, bomb: 0 };
+                    const dyn = data.dynamite || 0;
+                    const bomb = data.bomb || 0;
+                    const isMe = nick === currentPlayer;
+                    const row = document.createElement('div');
+                    row.className = `flex items-center justify-between gap-2 p-1.5 rounded-lg ${isMe ? 'bg-amber-950/40 border border-amber-500/50' : 'bg-slate-950/60 border border-slate-800'} text-xs`;
+
+                    row.innerHTML = `
+                        <span class="truncate ${isMe ? 'text-amber-400 font-bold' : 'text-slate-200'} min-w-0">${nick}${isMe ? ' <span class="text-[9px] bg-amber-800/80 text-amber-100 px-1 py-0.2 rounded">Вы</span>' : ''}</span>
+                        <div class="flex items-center gap-1.5 font-mono text-[11px] shrink-0">
+                            <span class="text-slate-300">🧨</span>
+                            <button onclick="modifyArsenal('${nick.replace(/'/g, "\\'")}', 'dynamite', -1)" class="w-6 h-6 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-red-400 font-bold rounded flex items-center justify-center">−</button>
+                            <strong class="text-amber-400 w-4 text-center">${dyn}</strong>
+                            <button onclick="modifyArsenal('${nick.replace(/'/g, "\\'")}', 'dynamite', 1)" class="w-6 h-6 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-green-400 font-bold rounded flex items-center justify-center">+</button>
+                            <span class="text-slate-500 mx-0.5">|</span>
+                            <span class="text-slate-300">💣</span>
+                            <button onclick="modifyArsenal('${nick.replace(/'/g, "\\'")}', 'bomb', -1)" class="w-6 h-6 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-red-400 font-bold rounded flex items-center justify-center">−</button>
+                            <strong class="text-amber-400 w-4 text-center">${bomb}</strong>
+                            <button onclick="modifyArsenal('${nick.replace(/'/g, "\\'")}', 'bomb', 1)" class="w-6 h-6 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-green-400 font-bold rounded flex items-center justify-center">+</button>
+                        </div>
+                    `;
+                    container.appendChild(row);
+                });
+                return;
+            }
+
+            // Участник: собственные ресурсы редактируются, остальные только просматриваются.
             if (currentPlayer) {
                 let myData = arsenalState[currentPlayer] || { dynamite: 0, bomb: 0 };
                 let myDyn = myData.dynamite || 0;
@@ -1378,7 +1440,6 @@
 
                 const myRow = document.createElement('div');
                 myRow.className = 'flex flex-col gap-1.5 p-2 rounded-xl bg-amber-950/40 border border-amber-500/60 shadow-sm mb-1.5';
-                
                 myRow.innerHTML = `
                     <div class="flex items-center justify-between">
                         <span class="text-amber-400 font-bold text-xs truncate">👤 ${currentPlayer} <span class="text-[9px] bg-amber-800/80 text-amber-100 px-1 py-0.2 rounded ml-1">Вы</span></span>
@@ -1418,10 +1479,8 @@
                 let data = arsenalState[nick] || { dynamite: 0, bomb: 0 };
                 let dyn = data.dynamite || 0;
                 let bomb = data.bomb || 0;
-
                 const row = document.createElement('div');
                 row.className = 'flex items-center justify-between p-1.5 rounded-lg bg-slate-950/60 border border-slate-800 text-xs hover:bg-slate-800/40 transition-colors';
-
                 row.innerHTML = `
                     <span class="truncate text-slate-200">${nick}</span>
                     <div class="flex items-center gap-2.5 font-mono text-[11px] shrink-0">
@@ -1434,32 +1493,45 @@
         }
 
         async function modifyArsenal(nick, type, delta) {
+            if (!nick || !['dynamite', 'bomb'].includes(type)) return;
+            if (!isStaffUser() && nick !== currentPlayer) {
+                alert('⛔ Вы можете изменять только свой арсенал.');
+                return;
+            }
+
             if (!arsenalState[nick]) arsenalState[nick] = { dynamite: 0, bomb: 0 };
             let newVal = (arsenalState[nick][type] || 0) + delta;
             if (newVal < 0) newVal = 0;
             arsenalState[nick][type] = newVal;
             renderArsenalList();
 
-            if (supabaseClient && nick === currentPlayer) {
-                const currentData = arsenalState[nick];
-                const { data: existing, error: selectErr } = await supabaseClient
-                    .from('arsenal')
-                    .select('id')
-                    .eq('player_name', nick)
-                    .maybeSingle();
+            if (!supabaseClient) return;
 
-                if (!selectErr && existing) {
-                    await supabaseClient.from('arsenal').update({
-                        dynamite: currentData.dynamite,
-                        bomb: currentData.bomb
-                    }).eq('id', existing.id);
-                } else {
-                    await supabaseClient.from('arsenal').insert([{
-                        player_name: nick,
-                        dynamite: currentData.dynamite,
-                        bomb: currentData.bomb
-                    }]);
-                }
+            const currentData = arsenalState[nick];
+            const { data: existing, error: selectErr } = await supabaseClient
+                .from('arsenal')
+                .select('id')
+                .eq('player_name', nick)
+                .maybeSingle();
+
+            if (selectErr) {
+                console.error('Ошибка чтения арсенала:', selectErr);
+                return;
+            }
+
+            if (existing) {
+                const { error } = await supabaseClient.from('arsenal').update({
+                    dynamite: currentData.dynamite,
+                    bomb: currentData.bomb
+                }).eq('id', existing.id);
+                if (error) console.error('Ошибка обновления арсенала:', error);
+            } else {
+                const { error } = await supabaseClient.from('arsenal').insert([{
+                    player_name: nick,
+                    dynamite: currentData.dynamite,
+                    bomb: currentData.bomb
+                }]);
+                if (error) console.error('Ошибка добавления арсенала:', error);
             }
         }
 
