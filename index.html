@@ -85,11 +85,16 @@
         }
 
         .siege-neutral {
-            color: rgba(209, 213, 219, 0.9);
-            background-color: rgba(15, 23, 42, 0.6);
-            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: rgba(226, 232, 240, 0.95);
+            background: rgba(148, 163, 184, 0.045);
+            border: 1px solid rgba(203, 213, 225, 0.55);
             text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
         }
+        .zone-cell-content { width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; overflow:visible; pointer-events:none; }
+        .zone-priority-icon { font-size:clamp(9px,2.2vw,15px); line-height:1; filter:drop-shadow(0 1px 2px #000); }
+        .zone-timer-text { font-size:clamp(9px,2.35vw,15px); line-height:1; font-weight:1000; font-family:ui-monospace,monospace; color:#fff; background:rgba(2,6,23,.5); border:1px solid rgba(255,255,255,.62); border-radius:4px; padding:2px 3px; white-space:nowrap; text-shadow:0 1px 2px #000; }
+        .zone-status-label { font-size:clamp(5px,1.25vw,8px); line-height:1; font-weight:900; white-space:nowrap; -webkit-text-stroke:1px #000; paint-order:stroke fill; text-shadow:0 1px 2px #000; }
+        .zone-owner-tag { font-size:clamp(6px,1.45vw,9px); line-height:1; font-weight:1000; color:#fff; background:rgba(2,6,23,.9); border-radius:3px; padding:1px 3px; }
         .siege-p1 {
             color: #ffffff;
             background-color: #FFA500;
@@ -152,6 +157,8 @@
             background-attachment: fixed;
         }
 
+        .zone-status-chip { font-size: 8px; line-height: 1; padding: 2px 3px; border-radius: 4px; font-weight: 900; letter-spacing: .02em; text-shadow: 0 1px 2px #000; white-space: nowrap; }
+        .map-mode-btn.active { background: #d97706 !important; color: #fff !important; border-color: #fbbf24 !important; }
         /* Вырезка фрагмента карты для карточки клетки */
         .cell-crop-preview {
             background-image: url('map.png');
@@ -231,7 +238,12 @@
                     <div class="text-[11px] text-slate-300 bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800 shadow pointer-events-auto" id="siege-role-hint">Режим просмотра</div>
                 </div>
 
-                <div id="siege-map-container" class="relative w-full max-w-[480px] mt-6" style="aspect-ratio: 594 / 865;">
+                <div class="w-full flex flex-wrap items-center justify-center gap-1.5 mt-8 mb-1 px-1 relative z-20" id="zone-map-toolbar">
+                    <span class="px-2.5 py-1.5 rounded-lg border border-slate-700 bg-slate-950/90 text-[10px] font-bold text-slate-200">🎯 Приоритет · ⏱ Таймер · 🏴 Статус</span>
+                    <button onclick="openZoneImportModal()" id="zone-import-open-btn" class="hidden px-2.5 py-1.5 rounded-lg border border-emerald-700 bg-emerald-950 text-emerald-300 text-[10px] font-bold">↻ Импорт данных JSON</button>
+                    <span id="zone-sync-label" class="w-full text-center text-[9px] text-slate-200" style="-webkit-text-stroke:0.3px #000; text-shadow:0 1px 3px #000;">Данные земель ещё не загружены</span>
+                </div>
+                <div id="siege-map-container" class="relative w-full max-w-[480px] mt-1" style="aspect-ratio: 594 / 865;">
                     <img src="map.png" class="absolute inset-0 w-full h-full object-contain rounded-lg shadow-2xl" alt="Карта" onerror="this.style.display='none'">
                     <div id="siege-cells-layer" class="absolute inset-0"></div>
                 </div>
@@ -392,6 +404,16 @@
         </div>
     </div>
 
+    <div id="zone-import-modal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md flex items-center justify-center z-[60] hidden p-3" onclick="closeZoneImportModal()">
+        <div class="bg-slate-900 border border-emerald-700/70 rounded-2xl max-w-xl w-full p-4 space-y-3 shadow-2xl" onclick="event.stopPropagation()">
+            <div class="flex justify-between items-center"><h2 class="text-base font-black text-emerald-300">↻ Синхронизация земель</h2><button onclick="closeZoneImportModal()" class="text-slate-400 text-lg px-2">✕</button></div>
+            <p class="text-xs text-slate-300">Вставь JSON из скрипта CoinHunters. Успешный импорт заменит все 33 записи актуальными данными игры, включая прежние ручные корректировки.</p>
+            <textarea id="zone-import-json" rows="9" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-[11px] font-mono text-slate-200" placeholder="Вставь сюда JSON..."></textarea>
+            <p id="zone-import-message" class="text-xs text-slate-400"></p>
+            <div class="flex gap-2"><button onclick="importZoneJson()" class="flex-1 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-bold">Проверить и импортировать</button><button onclick="closeZoneImportModal()" class="px-4 py-2 rounded-lg bg-slate-800 text-slate-300 text-xs">Отмена</button></div>
+        </div>
+    </div>
+
     <!-- ВСПЛЫВАЮЩЕЕ МОДАЛЬНОЕ ОКНО "КАРТОЧКА КЛЕТКИ" -->
     <div id="cell-card-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center z-50 hidden p-3" onclick="closeCellCardModal()">
         <div class="bg-slate-900 border border-slate-700/80 rounded-2xl max-w-md w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden relative" onclick="event.stopPropagation()">
@@ -428,6 +450,13 @@
                 
                 <!-- ОФИЦЕРСКАЯ ПАНЕЛЬ СТАТУСА ЦЕЛИ -->
                 <div id="cell-card-officer-controls" class="bg-slate-950/90 border border-amber-600/40 p-2.5 rounded-xl space-y-2 hidden">
+                    <div class="rounded-lg border border-emerald-800/70 bg-emerald-950/30 p-2 space-y-2">
+                        <div class="flex items-center justify-between"><span class="font-bold text-emerald-300">🏴 Статус земли</span><span id="card-zone-status" class="text-[10px] text-slate-300">Нет данных</span></div>
+                        <div class="grid grid-cols-3 gap-1"><button onclick="setZoneStatusFromCard('siege')" class="py-1.5 rounded bg-orange-800 text-[10px] font-bold">Осада</button><button onclick="setZoneStatusFromCard('owned')" class="py-1.5 rounded bg-red-900 text-[10px] font-bold">Под контролем</button><button onclick="setZoneStatusFromCard('free')" class="py-1.5 rounded bg-emerald-800 text-[10px] font-bold">Свободно</button></div>
+                        <div class="text-[10px] text-slate-400">Остаток времени</div><div id="card-zone-timer" class="text-xl text-center font-black font-mono text-white">—</div>
+                        <div class="grid grid-cols-4 gap-1"><button onclick="adjustZoneTimer(-1,'hour')" class="py-1 rounded bg-slate-800 text-[10px]">−1 час</button><button onclick="adjustZoneTimer(-1,'minute')" class="py-1 rounded bg-slate-800 text-[10px]">−1 мин</button><button onclick="adjustZoneTimer(1,'minute')" class="py-1 rounded bg-slate-800 text-[10px]">+1 мин</button><button onclick="adjustZoneTimer(1,'hour')" class="py-1 rounded bg-slate-800 text-[10px]">+1 час</button></div>
+                        <div class="flex gap-1"><input id="card-zone-timer-input" type="text" placeholder="Напр. 02:30 или 1д 04:20" class="min-w-0 flex-1 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs"><button onclick="setZoneTimerDirect()" class="px-3 rounded bg-emerald-800 text-[10px] font-bold">Установить</button></div>
+                    </div>
                     <div class="flex items-center justify-between text-[11px]">
                         <span class="font-bold text-amber-400">⚡ Статус цели (Офицер):</span>
                         <button onclick="officerClearCellDamage()" class="text-[10px] bg-red-950 hover:bg-red-900 text-red-300 border border-red-800 px-2 py-0.5 rounded font-bold transition-colors">🗑 Сбросить весь урон</button>
@@ -591,6 +620,9 @@
         let arsenalState = {}; 
         let iamHereState = {};
         let iamHereTimestamps = {}; 
+        let siegeZonesState = {};
+        let zoneMapMode = 'priority';
+        let zoneTimerInterval = null;
         
         let clanAnnouncement = 'Привет бойцам! Сверяем точки по плану.';
         let customBgUrl = localStorage.getItem('proto_custom_bg_v1') || '';
@@ -738,6 +770,12 @@
                         }
                     });
                 }
+                const { data: zoneData, error: zoneErr } = await supabaseClient.from('siege_zones').select('*');
+                if (!zoneErr && zoneData) {
+                    siegeZonesState = {};
+                    zoneData.forEach(row => { if (row.code) siegeZonesState[row.code] = row; });
+                    updateZoneSyncLabel();
+                }
             } catch (err) {
                 console.error("Ошибка загрузки данных из Supabase:", err);
             }
@@ -880,6 +918,8 @@
             const annInput = document.getElementById('announcement-input');
             const annActions = document.getElementById('announcement-actions');
             const officerManagementPanel = document.getElementById('officerManagementPanel');
+            const zoneImportBtn = document.getElementById('zone-import-open-btn');
+            if (zoneImportBtn) zoneImportBtn.classList.toggle('hidden', !['officer','leader'].includes(currentUserRole));
 
             document.getElementById('current-user-display').textContent = currentPlayer;
             annView.textContent = clanAnnouncement || 'Заметок пока нет.';
@@ -967,6 +1007,15 @@
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'iam_here' }, async () => {
                     await loadDataFromSupabase();
                     renderApp();
+                })
+                .subscribe();
+
+            supabaseClient
+                .channel('public:siege_zones')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'siege_zones' }, async () => {
+                    await loadDataFromSupabase();
+                    renderSiege();
+                    if (selectedSiegeCellId) refreshZoneCard(selectedSiegeCellId);
                 })
                 .subscribe();
         }
@@ -1567,10 +1616,16 @@
             renderCells();
         }
 
-        function toggleIamHereFromCard() {
+        async function toggleIamHereFromCard() {
             if (!selectedSiegeCellId) return;
-            setPlayerIamHere(selectedSiegeCellId);
-            openCellCardModal(selectedSiegeCellId);
+            const cellId = selectedSiegeCellId;
+            const playersHere = iamHereState[cellId] || [];
+            if (playersHere.includes(currentPlayer)) {
+                await removeIamHerePlayer(cellId, currentPlayer);
+            } else {
+                await setPlayerIamHere(cellId);
+            }
+            openCellCardModal(cellId);
         }
 
         function formatIamHereDuration(createdAt) {
@@ -1802,7 +1857,7 @@
             if (sheltersNumEl) sheltersNumEl.textContent = cellOwners.length;
 
             const officerPanel = document.getElementById('cell-card-officer-controls');
-            if (currentUserRole === 'officer') {
+            if (['officer','leader'].includes(currentUserRole)) {
                 officerPanel.classList.remove('hidden');
                 updateCardOfficerStatusButtons(cell.id);
             } else {
@@ -1827,6 +1882,7 @@
 
             updateCardDamageDisplay(cell.id);
             updateCardOwnersList(cell.id);
+            refreshZoneCard(cell.id);
 
             document.getElementById('cell-card-modal').classList.remove('hidden');
         }
@@ -2161,6 +2217,132 @@
             alert('✅ Урон по клетке полностью очищен!');
         }
 
+        function setZoneMapMode(mode) {
+            zoneMapMode = mode;
+            ['priority','timer','status'].forEach(m => {
+                const b = document.getElementById('zone-mode-' + m);
+                if (b) b.classList.toggle('active', m === mode);
+            });
+            renderSiege();
+        }
+        function zoneStatusLabel(zone) {
+            if (!zone) return 'Нет данных';
+            if (zone.state === 'siege') return 'Осада';
+            if (zone.state === 'owned') return 'Под контролем' + (zone.owner ? ' ' + String(zone.owner).replace(/^\[|\]$/g,'').slice(0,3).toUpperCase() : '');
+            return 'Свободно';
+        }
+        function zoneRemainingMs(zone) {
+            if (!zone) return 0;
+            const base = Number(zone.leftTimeMs || 0);
+            const stamp = zone.updated_at ? Date.parse(zone.updated_at) : Date.now();
+            return Math.max(0, base - Math.max(0, Date.now() - stamp));
+        }
+function formatZoneTimer(zone) {
+    if (!zone) return '—';
+    const ms = zoneRemainingMs(zone);
+    const totalMin = Math.floor(ms / 60000);
+    const hours = Math.floor(totalMin / 60);
+    const mins = totalMin % 60;
+    return `${String(hours).padStart(2,'0')}:${String(mins).padStart(2,'0')}`;
+}
+        function updateZoneSyncLabel() {
+            const el = document.getElementById('zone-sync-label');
+            if (!el) return;
+            const rows = Object.keys(siegeZonesState).length;
+            const latest = Object.values(siegeZonesState).map(z => Date.parse(z.updated_at || '')).filter(Number.isFinite).sort((a,b)=>b-a)[0];
+            el.textContent = rows ? `Земли синхронизированы: ${rows}/33${latest ? ' · ' + new Date(latest).toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : ''}` : 'Данные земель ещё не загружены';
+        }
+        function openZoneImportModal() {
+            if (!['officer','leader'].includes(currentUserRole)) return;
+            document.getElementById('zone-import-message').textContent = '';
+            document.getElementById('zone-import-modal').classList.remove('hidden');
+        }
+        function closeZoneImportModal() { document.getElementById('zone-import-modal').classList.add('hidden'); }
+        function normalizeZonePayload(parsed) {
+            if (Array.isArray(parsed)) return parsed;
+            if (Array.isArray(parsed.regions)) return parsed.regions;
+            if (Array.isArray(parsed.lands)) return parsed.lands;
+            if (Array.isArray(parsed.data)) return parsed.data;
+            throw new Error('В JSON не найден массив земель (regions / lands / data).');
+        }
+        async function importZoneJson() {
+            const msg = document.getElementById('zone-import-message');
+            if (!['officer','leader'].includes(currentUserRole)) return;
+            let rows;
+            try { rows = normalizeZonePayload(JSON.parse(document.getElementById('zone-import-json').value)); }
+            catch(e) { msg.className='text-xs text-red-400'; msg.textContent='Ошибка JSON: '+e.message; return; }
+            const validStates = ['free','siege','owned'];
+            const prepared = [];
+            const seen = new Set();
+            for (const item of rows) {
+                const code = String(item.code || item.regionCode || item.keyCode || '').trim().toUpperCase();
+                const cell = CELLS_DATA.find(c => c.key === code || c.name.toLowerCase() === String(item.name || '').toLowerCase());
+                if (!cell) continue;
+                if (seen.has(cell.key)) { msg.className='text-xs text-red-400'; msg.textContent=`Повторяется земля ${cell.name}. Ничего не изменено.`; return; }
+                const state = validStates.includes(item.state) ? item.state : (String(item.status || '').toLowerCase().includes('осад') ? 'siege' : String(item.status || '').toLowerCase().includes('занят') ? 'owned' : 'free');
+                let ms = item.leftTimeMs;
+                if (ms === undefined) ms = item.leftTime;
+                ms = Number(ms || 0);
+                if (!Number.isFinite(ms) || ms < 0) { msg.className='text-xs text-red-400'; msg.textContent=`Некорректный таймер для ${cell.name}. Ничего не изменено.`; return; }
+                let owner = item.owner;
+                if (owner && typeof owner === 'object') owner = owner.tag || owner.name || '';
+                owner = String(owner || '').replace(/^\[|\]$/g,'').slice(0,3).toUpperCase();
+                prepared.push({ region: cell.key, code: cell.key, name: cell.name, state, owner: owner || null, leftTimeMs: Math.floor(ms), updated_at: new Date().toISOString() });
+                seen.add(cell.key);
+            }
+            if (prepared.length !== CELLS_DATA.length || seen.size !== CELLS_DATA.length) {
+                const missing = CELLS_DATA.filter(c => !seen.has(c.key)).map(c=>c.key).join(', ');
+                msg.className='text-xs text-red-400'; msg.textContent=`Импорт отменён: распознано ${prepared.length}/33 земель. Не найдены: ${missing || 'есть неизвестные/дублирующиеся записи'}. База не изменена.`; return;
+            }
+            if (!supabaseClient) { msg.className='text-xs text-red-400'; msg.textContent='Нет подключения к базе данных.'; return; }
+            msg.className='text-xs text-amber-300'; msg.textContent='Синхронизация…';
+            const { error: upsertError } = await supabaseClient.from('siege_zones').upsert(prepared, { onConflict: 'region' });
+            if (upsertError) { msg.className='text-xs text-red-400'; msg.textContent='Ошибка записи: '+upsertError.message; return; }
+            const { error: deleteError } = await supabaseClient.from('siege_zones').delete().not('region','in',`(${prepared.map(r=>`"${r.region}"`).join(',')})`);
+            if (deleteError) { msg.className='text-xs text-red-400'; msg.textContent='Данные записаны, но очистка старых лишних строк не удалась: '+deleteError.message; return; }
+            await loadDataFromSupabase(); renderSiege();
+            msg.className='text-xs text-emerald-300'; msg.textContent='Готово: все 33 земли синхронизированы. Старые таймеры заменены.';
+            setTimeout(closeZoneImportModal, 1000);
+        }
+        function refreshZoneCard(cellId) {
+            const cell = CELLS_DATA.find(c => c.id == cellId); if (!cell) return;
+            const zone = siegeZonesState[cell.key];
+            const status = document.getElementById('card-zone-status');
+            const timer = document.getElementById('card-zone-timer');
+            if (status) status.textContent = zone ? zoneStatusLabel(zone) : 'Нет данных';
+            if (timer) timer.textContent = formatZoneTimer(zone);
+        }
+        async function saveZonePatch(cell, patch) {
+            if (!['officer','leader'].includes(currentUserRole) || !supabaseClient) return;
+            const old = siegeZonesState[cell.key];
+            if (!old) { alert('Сначала импортируй игровые данные по всем землям.'); return; }
+            const remaining = zoneRemainingMs(old);
+            const payload = { region: cell.key, code: cell.key, name: cell.name, state: old.state || 'free', owner: old.owner || null, leftTimeMs: remaining, updated_at: new Date().toISOString(), ...patch };
+            const { error } = await supabaseClient.from('siege_zones').upsert(payload, { onConflict: 'region' });
+            if (error) { alert('Не удалось сохранить: '+error.message); return; }
+            await loadDataFromSupabase(); renderSiege(); refreshZoneCard(cell.id);
+        }
+        async function setZoneStatusFromCard(state) {
+            if (!selectedSiegeCellId) return;
+            const cell = CELLS_DATA.find(c=>c.id == selectedSiegeCellId); if (!cell) return;
+            await saveZonePatch(cell, {state});
+        }
+        async function adjustZoneTimer(amount, unit) {
+            if (!selectedSiegeCellId) return;
+            const cell = CELLS_DATA.find(c=>c.id == selectedSiegeCellId); const zone = cell && siegeZonesState[cell.key]; if (!cell || !zone) return;
+            const delta = amount * (unit === 'hour' ? 3600000 : 60000);
+            await saveZonePatch(cell, {leftTimeMs: Math.max(0, zoneRemainingMs(zone)+delta)});
+        }
+        async function setZoneTimerDirect() {
+            if (!selectedSiegeCellId) return;
+            const cell = CELLS_DATA.find(c=>c.id == selectedSiegeCellId); if (!cell) return;
+            const value = document.getElementById('card-zone-timer-input').value.trim();
+            const m = value.match(/^(?:(\d+)\s*[дd]\s*)?(\d{1,3}):(\d{1,2})$/i);
+            if (!m) { alert('Формат: 02:30 или 1д 04:20'); return; }
+            const ms = (((Number(m[1]||0)*24 + Number(m[2]))*60)+Number(m[3]))*60000;
+            await saveZonePatch(cell, {leftTimeMs: ms});
+        }
+
         function renderSiege() {
             const layer = document.getElementById('siege-cells-layer');
             if (!layer) return;
@@ -2208,16 +2390,14 @@
                 if (status === 2) iconSymbol = '⚡'; 
                 if (status === 3) iconSymbol = '🧱'; 
 
-                let innerHtmlContent = `<span>${iconSymbol}</span>`;
-                if (totalCellDmg > 0) {
-                    innerHtmlContent += `<span class="text-[12px] md:text-[13px] font-mono font-black text-amber-200 bg-slate-950/85 px-1.5 py-0.5 rounded -mt-0.5 shadow">${formatDamage(totalCellDmg)}</span>`;
-                }
+                // Урон не загромождает карту: он остаётся в карточке клетки.
+                let innerHtmlContent = status > 0 ? `<span class="zone-priority-icon">${iconSymbol}</span>` : '';
 
                 const playersHere = iamHereState[cell.id] || [];
                 if (playersHere.length > 0) {
                     const hasMyPosHere = playersHere.includes(currentPlayer);
                     const flagBadge = document.createElement('div');
-                    flagBadge.className = `absolute -bottom-2 -left-2 px-1.5 py-0.5 rounded text-[10px] font-bold shadow border z-20 cursor-pointer flex items-center gap-0.5 ${
+                    flagBadge.className = `absolute -bottom-4 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded text-[10px] font-bold shadow border z-20 cursor-pointer flex items-center gap-0.5 whitespace-nowrap ${
                         hasMyPosHere ? 'bg-red-600 text-white border-white animate-pulse' : 'bg-slate-800 text-slate-100 border-slate-600'
                     }`;
                     flagBadge.innerHTML = `📍 ${playersHere.length}`;
@@ -2246,12 +2426,29 @@
                 }
 
                 marker.className = baseClass;
-                marker.innerHTML = (status === 0 && totalCellDmg === 0) ? '' : innerHtmlContent;
-                if (status === 0 && totalCellDmg > 0) {
-                    marker.innerHTML = `<span class="text-[12px] md:text-[13px] font-mono font-black text-amber-300 bg-slate-950/90 px-1.5 py-0.5 rounded shadow">${formatDamage(totalCellDmg)}</span>`;
+                const zone = siegeZonesState[cell.key];
+                if (zone) {
+                    const zState = zone.state || 'free';
+                    const statusColor = zState === 'siege' ? '#fb923c' : zState === 'owned' ? '#fca5a5' : '#86efac';
+                    const label = zState === 'siege' ? 'ОСАДА' : zState === 'owned' ? 'ПОД КОНТРОЛЕМ' : 'СВОБОДНО';
+                    const rawTag = String(zone.owner || '').replace(/^\[|\]$/g,'').slice(0,3).toUpperCase();
+                    const timerMarkup = `<span class="zone-timer-text">${formatZoneTimer(zone)}</span>`;
+                    const statusMarkup = `<span class="zone-status-label" style="color:${statusColor}">${label}</span>`;
+                    const ownerMarkup = zState === 'owned' && rawTag ? `<span class="zone-owner-tag">${rawTag}</span>` : '';
+                    marker.innerHTML = `<div class="zone-cell-content">${innerHtmlContent}${statusMarkup}${ownerMarkup}${timerMarkup}</div>`;
+                    marker.style.background = status > 0 ? '' : 'rgba(148,163,184,.045)';
+                    marker.style.border = status > 0 ? '' : '1px solid rgba(203,213,225,.55)';
+                    marker.style.boxShadow = status > 0 ? '' : '0 0 0 1px rgba(15,23,42,.15)';
+                } else {
+                    marker.innerHTML = innerHtmlContent;
+                    if (status === 0) {
+                        marker.style.background = 'rgba(148,163,184,.045)';
+                        marker.style.border = '1px solid rgba(203,213,225,.55)';
+                        marker.style.boxShadow = 'none';
+                    }
                 }
                 
-                marker.title = `${cell.name}` + (totalCellDmg > 0 ? `\nОбщий урон: ${formatDamage(totalCellDmg)}` : '');
+                marker.title = `${cell.name}` + (zone ? `\n${zoneStatusLabel(zone)} · ${formatZoneTimer(zone)}` : '') + (totalCellDmg > 0 ? `\nОбщий урон: ${formatDamage(totalCellDmg)}` : '');
 
                 if (hasMission) {
                     const missionBadge = document.createElement('div');
@@ -2324,6 +2521,7 @@
 
         // Старт работы при загрузке страницы
         window.addEventListener('DOMContentLoaded', checkAuthOnLoad);
+        setInterval(() => { renderSiege(); if (selectedSiegeCellId && !document.getElementById('cell-card-modal').classList.contains('hidden')) refreshZoneCard(selectedSiegeCellId); }, 60000);
     </script>
 </body>
 </html>
