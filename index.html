@@ -426,21 +426,21 @@
                 <!-- Кнопка закрытия -->
                 <button onclick="closeCellCardModal()" class="absolute top-2.5 right-2.5 bg-slate-950/80 hover:bg-slate-800 text-slate-300 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border border-slate-700 z-10 transition-colors">✕</button>
                 
-                <div class="absolute bottom-2.5 left-3 right-3 flex items-end justify-between z-10">
-                    <div>
+                <div class="absolute bottom-2.5 left-3 right-3 flex items-end justify-between z-10 gap-2">
+                    <div class="min-w-0 pr-12">
                         <div class="flex items-center gap-2 mb-0.5">
                             <span id="cell-card-color-badge" class="text-[10px] font-bold uppercase tracking-wider text-amber-400 bg-slate-950/80 px-2 py-0.5 rounded border border-slate-800">Фиолетовая</span>
                         </div>
                         <div class="flex items-center gap-2 flex-wrap">
-                            <h2 id="cell-card-name" class="text-lg font-black text-white tracking-wide leading-tight drop-shadow">Название Клетки</h2>
-                            <span id="cell-card-shelter-count" class="text-xs font-bold text-amber-300 bg-slate-950/80 border border-amber-500/30 px-2 py-0.5 rounded-lg flex items-center gap-1 shadow" title="Владельцев убежищ на этой клетке">
+                            <h2 id="cell-card-name" class="text-base font-black text-white tracking-wide leading-tight drop-shadow truncate">Название Клетки</h2>
+                            <span id="cell-card-shelter-count" class="text-xs font-bold text-amber-300 bg-slate-950/80 border border-amber-500/30 px-2 py-0.5 rounded-lg flex items-center gap-1 shadow shrink-0" title="Владельцев убежищ на этой клетке">
                                 ⛺ <span id="cell-card-shelters-num">0</span>
                             </span>
                         </div>
                     </div>
-                    <div class="text-right shrink-0">
-                        <div class="text-[10px] text-slate-400">Общий урон</div>
-                        <div id="cell-card-total-dmg" class="text-base font-black font-mono text-amber-400 drop-shadow">0</div>
+                    <div class="text-right shrink-0 pb-0.5">
+                        <div class="text-[9px] text-slate-400 leading-none mb-1">Общий урон</div>
+                        <div id="cell-card-total-dmg" class="text-sm font-black font-mono text-amber-400 drop-shadow leading-none">0</div>
                     </div>
                 </div>
             </div>
