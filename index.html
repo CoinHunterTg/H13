@@ -93,7 +93,7 @@
         .zone-cell-content { width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; overflow:visible; pointer-events:none; }
         .zone-priority-icon { font-size:clamp(9px,2.2vw,15px); line-height:1; filter:drop-shadow(0 1px 2px #000); }
         .zone-timer-text { font-size:clamp(9px,2.35vw,15px); line-height:1; font-weight:1000; font-family:ui-monospace,monospace; color:#fff; background:rgba(2,6,23,.5); border:1px solid rgba(255,255,255,.62); border-radius:4px; padding:2px 3px; white-space:nowrap; text-shadow:0 1px 2px #000; }
-        .zone-status-label { font-size:clamp(5px,1.25vw,8px); line-height:1; font-weight:900; white-space:nowrap; -webkit-text-stroke:1px #000; paint-order:stroke fill; text-shadow:0 1px 2px #000; }
+        .zone-status-label { font-size:clamp(6px,1.45vw,9px); line-height:1; font-weight:1000; white-space:nowrap; color:#fff; background:rgba(2,6,23,.9); border-radius:3px; padding:1px 3px; text-shadow:0 1px 2px #000; }
         .zone-owner-tag { font-size:clamp(6px,1.45vw,9px); line-height:1; font-weight:1000; color:#fff; background:rgba(2,6,23,.9); border-radius:3px; padding:1px 3px; }
         .siege-p1 {
             color: #ffffff;
@@ -452,7 +452,7 @@
                 <div id="cell-card-officer-controls" class="bg-slate-950/90 border border-amber-600/40 p-2.5 rounded-xl space-y-2 hidden">
                     <div class="rounded-lg border border-emerald-800/70 bg-emerald-950/30 p-2 space-y-2">
                         <div class="flex items-center justify-between"><span class="font-bold text-emerald-300">🏴 Статус земли</span><span id="card-zone-status" class="text-[10px] text-slate-300">Нет данных</span></div>
-                        <div class="grid grid-cols-3 gap-1"><button onclick="setZoneStatusFromCard('siege')" class="py-1.5 rounded bg-orange-800 text-[10px] font-bold">Осада</button><button onclick="setZoneStatusFromCard('owned')" class="py-1.5 rounded bg-red-900 text-[10px] font-bold">Под контролем</button><button onclick="setZoneStatusFromCard('free')" class="py-1.5 rounded bg-emerald-800 text-[10px] font-bold">Свободно</button></div>
+                        <div class="grid grid-cols-3 gap-1"><button onclick="setZoneStatusFromCard('siege')" class="py-1.5 rounded bg-orange-800 text-[10px] font-bold">Осада</button><button onclick="setZoneStatusFromCard('owned')" class="py-1.5 rounded bg-red-900 text-[10px] font-bold">Занята</button><button onclick="setZoneStatusFromCard('free')" class="py-1.5 rounded bg-emerald-800 text-[10px] font-bold">Свободно</button></div>
                         <div class="text-[10px] text-slate-400">Остаток времени</div><div id="card-zone-timer" class="text-xl text-center font-black font-mono text-white">—</div>
                         <div class="grid grid-cols-4 gap-1"><button onclick="adjustZoneTimer(-1,'hour')" class="py-1 rounded bg-slate-800 text-[10px]">−1 час</button><button onclick="adjustZoneTimer(-1,'minute')" class="py-1 rounded bg-slate-800 text-[10px]">−1 мин</button><button onclick="adjustZoneTimer(1,'minute')" class="py-1 rounded bg-slate-800 text-[10px]">+1 мин</button><button onclick="adjustZoneTimer(1,'hour')" class="py-1 rounded bg-slate-800 text-[10px]">+1 час</button></div>
                         <div class="flex gap-1"><input id="card-zone-timer-input" type="text" placeholder="Напр. 02:30 или 1д 04:20" class="min-w-0 flex-1 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs"><button onclick="setZoneTimerDirect()" class="px-3 rounded bg-emerald-800 text-[10px] font-bold">Установить</button></div>
@@ -2228,7 +2228,7 @@
         function zoneStatusLabel(zone) {
             if (!zone) return 'Нет данных';
             if (zone.state === 'siege') return 'Осада';
-            if (zone.state === 'owned') return 'Под контролем' + (zone.owner ? ' ' + String(zone.owner).replace(/^\[|\]$/g,'').slice(0,3).toUpperCase() : '');
+            if (zone.state === 'owned') return 'Занята' + (zone.owner ? ' ' + String(zone.owner).replace(/^\[|\]$/g,'').slice(0,3).toUpperCase() : '');
             return 'Свободно';
         }
         function zoneRemainingMs(zone) {
@@ -2265,45 +2265,142 @@ function formatZoneTimer(zone) {
             if (Array.isArray(parsed.data)) return parsed.data;
             throw new Error('В JSON не найден массив земель (regions / lands / data).');
         }
-        async function importZoneJson() {
-            const msg = document.getElementById('zone-import-message');
-            if (!['officer','leader'].includes(currentUserRole)) return;
-            let rows;
-            try { rows = normalizeZonePayload(JSON.parse(document.getElementById('zone-import-json').value)); }
-            catch(e) { msg.className='text-xs text-red-400'; msg.textContent='Ошибка JSON: '+e.message; return; }
-            const validStates = ['free','siege','owned'];
-            const prepared = [];
-            const seen = new Set();
-            for (const item of rows) {
-                const code = String(item.code || item.regionCode || item.keyCode || '').trim().toUpperCase();
-                const cell = CELLS_DATA.find(c => c.key === code || c.name.toLowerCase() === String(item.name || '').toLowerCase());
-                if (!cell) continue;
-                if (seen.has(cell.key)) { msg.className='text-xs text-red-400'; msg.textContent=`Повторяется земля ${cell.name}. Ничего не изменено.`; return; }
-                const state = validStates.includes(item.state) ? item.state : (String(item.status || '').toLowerCase().includes('осад') ? 'siege' : String(item.status || '').toLowerCase().includes('занят') ? 'owned' : 'free');
-                let ms = item.leftTimeMs;
-                if (ms === undefined) ms = item.leftTime;
-                ms = Number(ms || 0);
-                if (!Number.isFinite(ms) || ms < 0) { msg.className='text-xs text-red-400'; msg.textContent=`Некорректный таймер для ${cell.name}. Ничего не изменено.`; return; }
-                let owner = item.owner;
-                if (owner && typeof owner === 'object') owner = owner.tag || owner.name || '';
-                owner = String(owner || '').replace(/^\[|\]$/g,'').slice(0,3).toUpperCase();
-                prepared.push({ region: cell.key, code: cell.key, name: cell.name, state, owner: owner || null, leftTimeMs: Math.floor(ms), updated_at: new Date().toISOString() });
-                seen.add(cell.key);
-            }
-            if (prepared.length !== CELLS_DATA.length || seen.size !== CELLS_DATA.length) {
-                const missing = CELLS_DATA.filter(c => !seen.has(c.key)).map(c=>c.key).join(', ');
-                msg.className='text-xs text-red-400'; msg.textContent=`Импорт отменён: распознано ${prepared.length}/33 земель. Не найдены: ${missing || 'есть неизвестные/дублирующиеся записи'}. База не изменена.`; return;
-            }
-            if (!supabaseClient) { msg.className='text-xs text-red-400'; msg.textContent='Нет подключения к базе данных.'; return; }
-            msg.className='text-xs text-amber-300'; msg.textContent='Синхронизация…';
-            const { error: upsertError } = await supabaseClient.from('siege_zones').upsert(prepared, { onConflict: 'region' });
-            if (upsertError) { msg.className='text-xs text-red-400'; msg.textContent='Ошибка записи: '+upsertError.message; return; }
-            const { error: deleteError } = await supabaseClient.from('siege_zones').delete().not('region','in',`(${prepared.map(r=>`"${r.region}"`).join(',')})`);
-            if (deleteError) { msg.className='text-xs text-red-400'; msg.textContent='Данные записаны, но очистка старых лишних строк не удалась: '+deleteError.message; return; }
-            await loadDataFromSupabase(); renderSiege();
-            msg.className='text-xs text-emerald-300'; msg.textContent='Готово: все 33 земли синхронизированы. Старые таймеры заменены.';
-            setTimeout(closeZoneImportModal, 1000);
+
+async function importZoneJson() {
+    const msg = document.getElementById('zone-import-message');
+    if (!['officer','leader'].includes(currentUserRole)) return;
+
+    let rows;
+    try {
+        rows = normalizeZonePayload(JSON.parse(document.getElementById('zone-import-json').value));
+    } catch (e) {
+        msg.className = 'text-xs text-red-400';
+        msg.textContent = 'Ошибка JSON: ' + e.message;
+        return;
+    }
+
+    const validStates = ['free', 'siege', 'owned'];
+    const prepared = [];
+    const seen = new Set();
+
+    for (const item of rows) {
+        const code = String(item.code || item.regionCode || item.keyCode || '').trim().toUpperCase();
+        const cell = CELLS_DATA.find(c =>
+            c.key === code || c.name.toLowerCase() === String(item.name || '').toLowerCase()
+        );
+
+        if (!cell) continue;
+
+        if (seen.has(cell.key)) {
+            msg.className = 'text-xs text-red-400';
+            msg.textContent = `Повторяется земля ${cell.name}. Ничего не изменено.`;
+            return;
         }
+
+        const state = validStates.includes(item.state)
+            ? item.state
+            : (String(item.status || '').toLowerCase().includes('осад')
+                ? 'siege'
+                : String(item.status || '').toLowerCase().includes('занят')
+                    ? 'owned'
+                    : 'free');
+
+        let ms = item.leftTimeMs;
+        if (ms === undefined) ms = item.leftTime;
+        ms = Number(ms || 0);
+
+        if (!Number.isFinite(ms) || ms < 0) {
+            msg.className = 'text-xs text-red-400';
+            msg.textContent = `Некорректный таймер для ${cell.name}. Ничего не изменено.`;
+            return;
+        }
+
+        let owner = item.owner;
+        if (owner && typeof owner === 'object') owner = owner.tag || owner.name || '';
+        owner = String(owner || '').replace(/^\[|\]$/g, '').slice(0, 3).toUpperCase();
+
+        prepared.push({
+            region: cell.key,
+            code: cell.key,
+            name: cell.name,
+            state,
+            owner: owner || null,
+            leftTimeMs: Math.floor(ms),
+            updated_at: new Date().toISOString()
+        });
+
+        seen.add(cell.key);
+    }
+
+    if (prepared.length !== CELLS_DATA.length || seen.size !== CELLS_DATA.length) {
+        const missing = CELLS_DATA.filter(c => !seen.has(c.key)).map(c => c.key).join(', ');
+        msg.className = 'text-xs text-red-400';
+        msg.textContent = `Импорт отменён: распознано ${prepared.length}/33 земель. Не найдены: ${missing || 'есть неизвестные/дублирующиеся записи'}. База не изменена.`;
+        return;
+    }
+
+    if (!supabaseClient) {
+        msg.className = 'text-xs text-red-400';
+        msg.textContent = 'Нет подключения к базе данных.';
+        return;
+    }
+
+    msg.className = 'text-xs text-amber-300';
+    msg.textContent = 'Синхронизация…';
+
+    const { error: upsertError } = await supabaseClient
+        .from('siege_zones')
+        .upsert(prepared, { onConflict: 'region' });
+
+    if (upsertError) {
+        msg.className = 'text-xs text-red-400';
+        msg.textContent = 'Ошибка записи: ' + upsertError.message;
+        return;
+    }
+
+    const { error: deleteError } = await supabaseClient
+        .from('siege_zones')
+        .delete()
+        .not('region', 'in', `(${prepared.map(r => `"${r.region}"`).join(',')})`);
+
+    if (deleteError) {
+        msg.className = 'text-xs text-red-400';
+        msg.textContent = 'Данные записаны, но очистка старых лишних строк не удалась: ' + deleteError.message;
+        return;
+    }
+
+    // Сбрасываем приоритет только у земель под контролем.
+    const ownedCellIds = prepared
+        .filter(zone => zone.state === 'owned')
+        .map(zone => {
+            const cell = CELLS_DATA.find(c => c.key === zone.region);
+            return cell ? String(cell.id) : null;
+        })
+        .filter(Boolean);
+
+    if (ownedCellIds.length) {
+        const { error: resetError } = await supabaseClient
+            .from('siege_cell_status')
+            .delete()
+            .in('id', ownedCellIds);
+
+        if (resetError) {
+            msg.className = 'text-xs text-amber-300';
+            msg.textContent = 'Земли импортированы, но не удалось сбросить приоритеты: ' + resetError.message;
+            await loadDataFromSupabase();
+            renderSiege();
+            return;
+        }
+    }
+
+    await loadDataFromSupabase();
+    renderSiege();
+
+    msg.className = 'text-xs text-emerald-300';
+    msg.textContent = 'Готово: все 33 земли синхронизированы. Старые таймеры заменены.';
+    setTimeout(closeZoneImportModal, 1000);
+}
+
         function refreshZoneCard(cellId) {
             const cell = CELLS_DATA.find(c => c.id == cellId); if (!cell) return;
             const zone = siegeZonesState[cell.key];
@@ -2429,8 +2526,8 @@ function formatZoneTimer(zone) {
                 const zone = siegeZonesState[cell.key];
                 if (zone) {
                     const zState = zone.state || 'free';
-                    const statusColor = zState === 'siege' ? '#fb923c' : zState === 'owned' ? '#fca5a5' : '#86efac';
-                    const label = zState === 'siege' ? 'ОСАДА' : zState === 'owned' ? 'ПОД КОНТРОЛЕМ' : 'СВОБОДНО';
+                    const statusColor = zState === 'siege' ? '#ef4444' : zState === 'owned' ? '#e2e8f0' : '#86efac';
+                    const label = zState === 'siege' ? 'ОСАДА' : zState === 'owned' ? 'ЗАНЯТА' : 'СВОБОДНО';
                     const rawTag = String(zone.owner || '').replace(/^\[|\]$/g,'').slice(0,3).toUpperCase();
                     const timerMarkup = `<span class="zone-timer-text">${formatZoneTimer(zone)}</span>`;
                     const statusMarkup = `<span class="zone-status-label" style="color:${statusColor}">${label}</span>`;
