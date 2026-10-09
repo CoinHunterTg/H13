@@ -2315,7 +2315,7 @@ async function importZoneJson() {
 
         let owner = item.owner;
         if (owner && typeof owner === 'object') owner = owner.tag || owner.name || '';
-        owner = String(owner || '').replace(/^\[|\]$/g, '').slice(0, 3).toUpperCase();
+        owner = String(owner || '').replace(/^\[|\]$/g, '').slice(0, 4).toUpperCase();
 
         prepared.push({
             region: cell.key,
@@ -2526,7 +2526,7 @@ async function importZoneJson() {
                     const zState = zone.state || 'free';
                     const statusColor = zState === 'siege' ? '#ef4444' : zState === 'owned' ? '#e2e8f0' : '#86efac';
                     const label = zState === 'siege' ? 'ОСАДА' : zState === 'owned' ? 'ЗАНЯТА' : 'СВОБОДНО';
-                    const rawTag = String(zone.owner || '').replace(/^\[|\]$/g,'').slice(0,3).toUpperCase();
+                    const rawTag = String(zone.owner || '').replace(/^\[|\]$/g,'').slice(0,4).toUpperCase();
                     const timerMarkup = `<span class="zone-timer-text">${formatZoneTimer(zone)}</span>`;
                     const statusMarkup = `<span class="zone-status-label" style="color:${statusColor}">${label}</span>`;
                     const ownerMarkup = zState === 'owned' && rawTag ? `<span class="zone-owner-tag">${rawTag}</span>` : '';
