@@ -2118,8 +2118,6 @@
             let newVal = currentVal + delta;
             if (newVal < 0) newVal = 0;
 
-            if (type === 'shelter' && newVal > 2000000000) newVal = 2000000000;
-
             if (newVal === 0) {
                 delete siegeDamageState[selectedSiegeCellId][currentPlayer][type];
                 if (siegeDamageTimestamps[selectedSiegeCellId] &&
