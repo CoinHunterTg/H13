@@ -416,10 +416,8 @@
 
 <!-- ВСПЛЫВАЮЩЕЕ МОДАЛЬНОЕ ОКНО "КАРТОЧКА КЛЕТКИ" -->
     <div id="cell-card-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-start justify-center z-50 hidden p-4 pt-16 pb-16 overflow-y-auto" onclick="closeCellCardModal()">
-        <!-- ИЗМЕНЕНИЕ 1: max-h-[85vh] вместо max-h-[90vh] -->
         <div class="bg-slate-900 border border-slate-700/80 rounded-2xl max-w-md w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden relative" onclick="event.stopPropagation()">
             
-            <!-- ИЗМЕНЕНИЕ 2: добавлен класс shrink-0 к шапке -->
             <!-- Шапка карточки с динамо-вырезкой карты -->
             <div class="relative h-40 w-full border-b border-slate-800 shrink-0 overflow-hidden bg-slate-950">
                 <div id="cell-card-map-crop" class="absolute inset-0 cell-crop-preview opacity-85"></div>
@@ -485,30 +483,38 @@
                     </div>
 
                     <div id="card-shelter-wrap" class="flex items-center justify-between py-1">
-                        <span class="text-slate-300 text-xs">Убежища ⛺ (+1B):</span>
+                        <span class="text-slate-300 text-xs">Убежища (до 2B):</span>
                         <div class="flex items-center gap-2">
-                            <button onclick="modifyDamage('shelter', -1000000000)" class="w-8 h-8 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 rounded-lg text-red-400 font-bold text-base flex items-center justify-center">-</button>
+                            <button onclick="adjustLocalDamage('shelter', -1000000000)" class="w-8 h-8 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 rounded-lg text-red-400 font-bold text-base flex items-center justify-center">-</button>
                             <span id="card-my-dmg-shelter" class="font-mono w-12 text-center text-sm font-bold">0</span>
-                            <button onclick="modifyDamage('shelter', 1000000000)" class="w-8 h-8 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 rounded-lg text-green-400 font-bold text-base flex items-center justify-center">+</button>
+                            <button onclick="adjustLocalDamage('shelter', 1000000000)" class="w-8 h-8 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 rounded-lg text-green-400 font-bold text-base flex items-center justify-center">+</button>
                         </div>
                     </div>
 
                     <div class="flex items-center justify-between py-1 border-t border-slate-800/60">
                         <span class="text-slate-300 text-xs">Динамит 🧨 (+2B):</span>
                         <div class="flex items-center gap-2">
-                            <button onclick="modifyDamage('dynamite', -2000000000)" class="w-8 h-8 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 rounded-lg text-red-400 font-bold text-base flex items-center justify-center">-</button>
+                            <button onclick="adjustLocalDamage('dynamite', -2000000000)" class="w-8 h-8 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 rounded-lg text-red-400 font-bold text-base flex items-center justify-center">-</button>
                             <span id="card-my-dmg-dynamite" class="font-mono w-12 text-center text-sm font-bold">0</span>
-                            <button onclick="modifyDamage('dynamite', 2000000000)" class="w-8 h-8 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 rounded-lg text-green-400 font-bold text-base rounded flex items-center justify-center">+</button>
+                            <button onclick="adjustLocalDamage('dynamite', 2000000000)" class="w-8 h-8 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 rounded-lg text-green-400 font-bold text-base rounded flex items-center justify-center">+</button>
                         </div>
                     </div>
 
                     <div class="flex items-center justify-between py-1 border-t border-slate-800/60">
                         <span class="text-slate-300 text-xs">Бомба 💣 (+200M):</span>
                         <div class="flex items-center gap-2">
-                            <button onclick="modifyDamage('bomb', -200000000)" class="w-8 h-8 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 rounded-lg text-red-400 font-bold text-base flex items-center justify-center">-</button>
+                            <button onclick="adjustLocalDamage('bomb', -200000000)" class="w-8 h-8 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 rounded-lg text-red-400 font-bold text-base flex items-center justify-center">-</button>
                             <span id="card-my-dmg-bomb" class="font-mono w-12 text-center text-sm font-bold">0</span>
-                            <button onclick="modifyDamage('bomb', 200000000)" class="w-8 h-8 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 rounded-lg text-green-400 font-bold text-base rounded flex items-center justify-center">+</button>
+                            <button onclick="adjustLocalDamage('bomb', 200000000)" class="w-8 h-8 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 rounded-lg text-green-400 font-bold text-base rounded flex items-center justify-center">+</button>
                         </div>
+                    </div>
+
+                    <!-- Кнопка подтверждения и отправки урона -->
+                    <div class="pt-2 border-t border-slate-800 flex items-center justify-between gap-2">
+                        <div class="text-[11px] text-slate-400">Итого: <strong id="card-my-total-preview" class="text-amber-400 font-mono">0</strong></div>
+                        <button onclick="commitMyDamage()" class="bg-amber-600 hover:bg-amber-500 active:scale-95 text-white font-bold text-xs py-2 px-4 rounded-xl transition-all shadow flex items-center gap-1.5">
+                            ⚔️ Подтвердить
+                        </button>
                     </div>
                 </div>
 
@@ -619,6 +625,7 @@
         let siegeMissionState = {}; 
         let siegeDamageState = {}; 
         let siegeDamageTimestamps = {};
+        let siegeDamageHistoryList = []; // Массив для истории журнала
         let arsenalState = {}; 
         let iamHereState = {};
         let iamHereTimestamps = {}; 
@@ -633,6 +640,9 @@
         let currentUserRole = localStorage.getItem('proto_auth_role') || '';
         let viewingPlayer = '';
         let selectedSiegeCellId = null;
+
+        // Временный локальный буфер для несохраненных изменений в открытой карточке
+        let tempDraftDamage = { shelter: 0, dynamite: 0, bomb: 0 };
 
         // --- СОСТОЯНИЕ МУЛЬТИ-ВЫБОРА ---
         let isSelectMode = false;
@@ -687,17 +697,16 @@
             }
         }
 
+// ИСПРАВЛЕННАЯ ФУНКЦИЯ ЗАГРУЗКИ (добавлен безопасный запрос к истории)
         async function loadDataFromSupabase() {
             if (!supabaseClient) return;
 
             try {
-                const { data: fightersData, error: fightersErr } = await supabaseClient.from('fighters').select('*');
-                if (!fightersErr && fightersData) {
-                    dynamicMembers = fightersData;
-                }
+                const { data: fightersData } = await supabaseClient.from('fighters').select('*');
+                if (fightersData) dynamicMembers = fightersData;
 
-                const { data: sheltersData, error: sheltersErr } = await supabaseClient.from('shelters').select('*');
-                if (!sheltersErr && sheltersData) {
+                const { data: sheltersData } = await supabaseClient.from('shelters').select('*');
+                if (sheltersData) {
                     sheltersState = {};
                     sheltersData.forEach(row => {
                         const cellId = row.shelter_type; 
@@ -709,8 +718,8 @@
                     });
                 }
 
-                const { data: siegeData, error: siegeErr } = await supabaseClient.from('siege').select('*');
-                if (!siegeErr && siegeData && siegeData.length > 0) {
+                const { data: siegeData } = await supabaseClient.from('siege').select('*');
+                if (siegeData && siegeData.length > 0) {
                     const latest = siegeData[siegeData.length - 1];
                     if (latest.announcement !== null) clanAnnouncement = latest.announcement;
                     if (latest.mission_text !== null && latest.mission_text !== '') {
@@ -718,20 +727,16 @@
                     }
                 }
 
-                const { data: statusData, error: statusErr } = await supabaseClient.from('siege_cell_status').select('*');
-                if (!statusErr && statusData) {
+                const { data: statusData } = await supabaseClient.from('siege_cell_status').select('*');
+                if (statusData) {
                     siegeState = {};
                     statusData.forEach(row => {
-                        const cellId = row.id; 
-                        const status = row.status;
-                        if (cellId && status !== undefined) {
-                            siegeState[cellId] = Number(status); 
-                        }
+                        if (row.id && row.status !== undefined) siegeState[row.id] = Number(row.status); 
                     });
                 }
 
-                const { data: dmgData, error: dmgErr } = await supabaseClient.from('siege_damage').select('*');
-                if (!dmgErr && dmgData) {
+                const { data: dmgData } = await supabaseClient.from('siege_damage').select('*');
+                if (dmgData) {
                     siegeDamageState = {};
                     dmgData.forEach(row => {
                         const cellId = row.cell_id;
@@ -741,39 +746,44 @@
                         if (!siegeDamageState[cellId]) siegeDamageState[cellId] = {};
                         if (!siegeDamageState[cellId][player]) siegeDamageState[cellId][player] = { shelter: 0, dynamite: 0, bomb: 0 };
                         siegeDamageState[cellId][player][type] = amount;
-                        if (!siegeDamageTimestamps[cellId]) siegeDamageTimestamps[cellId] = {};
-                        if (!siegeDamageTimestamps[cellId][player]) siegeDamageTimestamps[cellId][player] = {};
-                        siegeDamageTimestamps[cellId][player][type] = row.created_at;
                     });
                 }
 
-                const { data: arsenalData, error: arsenalErr } = await supabaseClient.from('arsenal').select('*');
-                if (!arsenalErr && arsenalData) {
+                // Безопасная загрузка истории журнала атак
+                const { data: historyData, error: historyErr } = await supabaseClient
+                    .from('siege_damage_history')
+                    .select('*')
+                    .order('created_at', { ascending: false })
+                    .limit(50);
+                
+                if (!historyErr && historyData) {
+                    siegeDamageHistoryList = historyData;
+                } else {
+                    console.warn("Таблица siege_damage_history недоступна или пуста:", historyErr);
+                    siegeDamageHistoryList = [];
+                }
+
+                const { data: arsenalData } = await supabaseClient.from('arsenal').select('*');
+                if (arsenalData) {
                     arsenalState = {};
                     arsenalData.forEach(row => {
-                        arsenalState[row.player_name] = {
-                            dynamite: row.dynamite || 0,
-                            bomb: row.bomb || 0
-                        };
+                        arsenalState[row.player_name] = { dynamite: row.dynamite || 0, bomb: row.bomb || 0 };
                     });
                 }
 
-                const { data: iamHereData, error: iamHereErr } = await supabaseClient.from('iam_here').select('*');
-                if (!iamHereErr && iamHereData) {
+                const { data: iamHereData } = await supabaseClient.from('iam_here').select('*');
+                if (iamHereData) {
                     iamHereState = {};
                     iamHereData.forEach(row => {
-                        const cellId = row.cell_id;
-                        const player = row.player_name;
-                        if (cellId && player) {
-                            if (!iamHereState[cellId]) iamHereState[cellId] = [];
-                            if (!iamHereState[cellId].includes(player)) iamHereState[cellId].push(player);
-                            if (!iamHereTimestamps[cellId]) iamHereTimestamps[cellId] = {};
-                            iamHereTimestamps[cellId][player] = row.created_at;
+                        if (row.cell_id && row.player_name) {
+                            if (!iamHereState[row.cell_id]) iamHereState[row.cell_id] = [];
+                            if (!iamHereState[row.cell_id].includes(row.player_name)) iamHereState[row.cell_id].push(row.player_name);
                         }
                     });
                 }
-                const { data: zoneData, error: zoneErr } = await supabaseClient.from('siege_zones').select('*');
-                if (!zoneErr && zoneData) {
+
+                const { data: zoneData } = await supabaseClient.from('siege_zones').select('*');
+                if (zoneData) {
                     siegeZonesState = {};
                     zoneData.forEach(row => { if (row.code) siegeZonesState[row.code] = row; });
                     updateZoneSyncLabel();
@@ -971,6 +981,15 @@
                 })
                 .subscribe();
 
+            // Подписка на историю атак для мгновенного обновления Журнала у всех участников
+            supabaseClient
+                .channel('public:siege_damage_history')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'siege_damage_history' }, async () => {
+                    await loadDataFromSupabase();
+                    renderDamageRegistrations();
+                })
+                .subscribe();
+
             supabaseClient
                 .channel('public:shelters')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'shelters' }, async () => {
@@ -1081,7 +1100,6 @@
                 });
             });
 
-            // Преобразуем в массив объектов и сортируем по убыванию количества убежищ
             let sortedPlayers = Object.keys(playerCounts).map(player => {
                 return { name: player, count: playerCounts[player] };
             }).sort((a, b) => b.count - a.count);
@@ -1123,14 +1141,12 @@
 
             const selectedData = getSelectedCellsData();
             
-            // Группировка выбранных клеток по очередям
             const p1Cells = selectedData.filter(c => (siegeState[c.id] || 0) === 1);
             const p2Cells = selectedData.filter(c => (siegeState[c.id] || 0) === 2);
             const otherCells = selectedData.filter(c => (siegeState[c.id] || 0) !== 1 && (siegeState[c.id] || 0) !== 2);
 
             let attackTargetText = selectedData.map(c => c.name).join(', ');
 
-            // Сборка списка игроков без дублей, сортировка от большего количества убежищ
             const sortedPlayers = getPlayersForSelectedCells();
             const forcesText = sortedPlayers.length > 0 
                 ? sortedPlayers.map(p => `@${p.name}${p.count > 1 ? ` (⛺: ${p.count})` : ''}`).join('\n')
@@ -1483,7 +1499,6 @@
                 return;
             }
 
-            // Участник: собственные ресурсы редактируются, остальные только просматриваются.
             if (currentPlayer) {
                 let myData = arsenalState[currentPlayer] || { dynamite: 0, bomb: 0 };
                 let myDyn = myData.dynamite || 0;
@@ -1882,6 +1897,10 @@
                 iamHereBtn.textContent = '📍 Я здесь';
             }
 
+            // Копируем сохраненные данные игрока во временный буфер для редактирования
+            const savedDmg = (siegeDamageState[cell.id] && siegeDamageState[cell.id][currentPlayer]) || { shelter: 0, dynamite: 0, bomb: 0 };
+            tempDraftDamage = { ...savedDmg };
+
             updateCardDamageDisplay(cell.id);
             updateCardOwnersList(cell.id);
             refreshZoneCard(cell.id);
@@ -1948,6 +1967,25 @@
             renderSiege();
         }
 
+        // Изменение значений локально (в буфере) без отправки в базу
+        function adjustLocalDamage(type, delta) {
+            if (!selectedSiegeCellId || !currentPlayer) return;
+
+            const owners = sheltersState[selectedSiegeCellId] || [];
+            if (type === 'shelter' && !owners.includes(currentPlayer)) {
+                alert('⛔ Удар из убежища доступен только владельцам этой клетки!');
+                return;
+            }
+
+            let currentVal = tempDraftDamage[type] || 0;
+            let newVal = currentVal + delta;
+            if (newVal < 0) newVal = 0;
+            if (type === 'shelter' && newVal > 2000000000) newVal = 2000000000;
+
+            tempDraftDamage[type] = newVal;
+            updateCardDamageDisplay(selectedSiegeCellId);
+        }
+
         function updateCardDamageDisplay(cellId) {
             const owners = sheltersState[cellId] || [];
             const isOwner = owners.includes(currentPlayer);
@@ -1955,10 +1993,143 @@
             if (isOwner) shelterWrap.classList.remove('hidden');
             else shelterWrap.classList.add('hidden');
 
-            const dmg = (siegeDamageState[cellId] && siegeDamageState[cellId][currentPlayer]) || { shelter: 0, dynamite: 0, bomb: 0 };
-            document.getElementById('card-my-dmg-shelter').textContent = formatDamage(dmg.shelter);
-            document.getElementById('card-my-dmg-dynamite').textContent = formatDamage(dmg.dynamite);
-            document.getElementById('card-my-dmg-bomb').textContent = formatDamage(dmg.bomb);
+            document.getElementById('card-my-dmg-shelter').textContent = formatDamage(tempDraftDamage.shelter || 0);
+            document.getElementById('card-my-dmg-dynamite').textContent = formatDamage(tempDraftDamage.dynamite || 0);
+            document.getElementById('card-my-dmg-bomb').textContent = formatDamage(tempDraftDamage.bomb || 0);
+
+            const totalDraft = (tempDraftDamage.shelter || 0) + (tempDraftDamage.dynamite || 0) + (tempDraftDamage.bomb || 0);
+            const totalPreviewEl = document.getElementById('card-my-total-preview');
+            if (totalPreviewEl) totalPreviewEl.textContent = formatDamage(totalDraft);
+        }
+
+// ИСПРАВЛЕННАЯ ФУНКЦИЯ ПОДТВЕРЖДЕНИЯ АТАКИ (с записью дельты в историю)
+        async function commitMyDamage() {
+            if (!selectedSiegeCellId || !currentPlayer) return;
+
+            const cellId = selectedSiegeCellId;
+            const savedDmg = (siegeDamageState[cellId] && siegeDamageState[cellId][currentPlayer]) || { shelter: 0, dynamite: 0, bomb: 0 };
+
+            const diffs = [
+                { type: 'shelter', delta: (tempDraftDamage.shelter || 0) - (savedDmg.shelter || 0) },
+                { type: 'dynamite', delta: (tempDraftDamage.dynamite || 0) - (savedDmg.dynamite || 0) },
+                { type: 'bomb', delta: (tempDraftDamage.bomb || 0) - (savedDmg.bomb || 0) }
+            ];
+
+            const hasChanges = diffs.some(d => d.delta !== 0);
+            if (!hasChanges) {
+                alert('ℹ Нет изменений для подтверждения.');
+                return;
+            }
+
+            if (!siegeDamageState[cellId]) siegeDamageState[cellId] = {};
+            
+            for (const item of diffs) {
+                const newVal = tempDraftDamage[item.type];
+                if (newVal === 0) {
+                    if (siegeDamageState[cellId][currentPlayer]) {
+                        delete siegeDamageState[cellId][currentPlayer][item.type];
+                    }
+                } else {
+                    if (!siegeDamageState[cellId][currentPlayer]) siegeDamageState[cellId][currentPlayer] = { shelter: 0, dynamite: 0, bomb: 0 };
+                    siegeDamageState[cellId][currentPlayer][item.type] = newVal;
+                }
+            }
+
+            if (siegeDamageState[cellId][currentPlayer] && Object.values(siegeDamageState[cellId][currentPlayer]).every(v => v === 0)) {
+                delete siegeDamageState[cellId][currentPlayer];
+            }
+
+            updateCardOwnersList(cellId);
+            renderSiege();
+
+            if (supabaseClient) {
+                for (const item of diffs) {
+                    const newVal = tempDraftDamage[item.type];
+                    
+                    if (newVal === 0) {
+                        await supabaseClient.from('siege_damage')
+                            .delete()
+                            .eq('cell_id', String(cellId))
+                            .eq('player_name', currentPlayer)
+                            .eq('damage_type', item.type);
+                    } else {
+                        const { data: existing } = await supabaseClient
+                            .from('siege_damage')
+                            .select('id')
+                            .eq('cell_id', String(cellId))
+                            .eq('player_name', currentPlayer)
+                            .eq('damage_type', item.type)
+                            .maybeSingle();
+
+                        if (existing) {
+                            await supabaseClient.from('siege_damage')
+                                .update({ amount: newVal })
+                                .eq('id', existing.id);
+                        } else {
+                            await supabaseClient.from('siege_damage').insert([{
+                                cell_id: String(cellId),
+                                player_name: currentPlayer,
+                                damage_type: item.type,
+                                amount: newVal
+                            }]);
+                        }
+                    }
+
+                    // Записываем изменение в историю только если дельта не нулевая
+                    if (item.delta !== 0) {
+                        const { error: histErr } = await supabaseClient.from('siege_damage_history').insert([{
+                            cell_id: String(cellId),
+                            player_name: currentPlayer,
+                            damage_type: item.type,
+                            amount_delta: item.delta
+                        }]);
+                        if (histErr) console.error("Ошибка записи истории атак:", histErr);
+                    }
+                }
+            }
+
+            // Перезагружаем актуальные данные истории с сервера
+            await loadDataFromSupabase();
+            renderDamageRegistrations();
+
+            alert('✅ Успешно зафиксировано!');
+            openCellCardModal(cellId);
+        }
+
+        // ИСПРАВЛЕННАЯ ФУНКЦИЯ СБРОСА УРОНА
+        async function resetMyDamage() {
+            if (!selectedSiegeCellId || !currentPlayer) return;
+            if (!confirm('Сбросить весь ваш урон по этой клетке?')) return;
+
+            const cellId = selectedSiegeCellId;
+            const savedDmg = (siegeDamageState[cellId] && siegeDamageState[cellId][currentPlayer]) || { shelter: 0, dynamite: 0, bomb: 0 };
+
+            if (supabaseClient) {
+                for (const type of ['shelter', 'dynamite', 'bomb']) {
+                    const val = savedDmg[type] || 0;
+                    if (val > 0) {
+                        await supabaseClient.from('siege_damage_history').insert([{
+                            cell_id: String(cellId),
+                            player_name: currentPlayer,
+                            damage_type: type,
+                            amount_delta: -val
+                        }]);
+                    }
+                }
+                await supabaseClient.from('siege_damage')
+                    .delete()
+                    .eq('cell_id', String(cellId))
+                    .eq('player_name', currentPlayer);
+            }
+
+            if (siegeDamageState[cellId]) delete siegeDamageState[cellId][currentPlayer];
+            tempDraftDamage = { shelter: 0, dynamite: 0, bomb: 0 };
+
+            await loadDataFromSupabase();
+            updateCardDamageDisplay(cellId);
+            updateCardOwnersList(cellId);
+            renderSiege();
+            alert('✅ Ваш урон по этой клетке сброшен.');
         }
 
         function updateCardOwnersList(cellId) {
@@ -2031,171 +2202,47 @@
             }).replace(',', '');
         }
 
+        // Отрисовка журнала атак на основе таблицы siege_damage_history
         function renderDamageRegistrations() {
             const listEl = document.getElementById('siege-damage-registration-list');
             if (!listEl) return;
 
-            const registrations = [];
             const typeInfo = {
                 shelter: { label: 'Убежище', icon: '⛺' },
                 dynamite: { label: 'Динамит', icon: '🧨' },
                 bomb: { label: 'Бомба', icon: '💣' }
             };
 
-            Object.keys(siegeDamageState).forEach(cellId => {
-                const cell = CELLS_DATA.find(c => c.id == cellId);
-                const cellName = cell ? cell.name : cellId;
-                const players = siegeDamageState[cellId] || {};
-
-                Object.keys(players).forEach(player => {
-                    const damage = players[player] || {};
-                    Object.keys(typeInfo).forEach(type => {
-                        if ((damage[type] || 0) <= 0) return;
-
-                        const info = typeInfo[type];
-                        const createdAt = siegeDamageTimestamps[cellId] &&
-                            siegeDamageTimestamps[cellId][player] &&
-                            siegeDamageTimestamps[cellId][player][type];
-
-                        registrations.push({
-                            cellId,
-                            cellName,
-                            player,
-                            type,
-                            label: info.label,
-                            icon: info.icon,
-                            amount: damage[type] || 0,
-                            createdAt
-                        });
-                    });
-                });
-            });
-
-            registrations.sort((a, b) => {
-                const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-                const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-                return timeB - timeA;
-            });
-
             listEl.innerHTML = '';
 
-            if (registrations.length === 0) {
-                listEl.innerHTML = '<div class="text-slate-500 text-center py-6 text-[11px]">Записей пока нет</div>';
+            if (!siegeDamageHistoryList || siegeDamageHistoryList.length === 0) {
+                listEl.innerHTML = '<div class="text-slate-500 text-center py-6 text-[11px]">Записей в журнале пока нет</div>';
                 return;
             }
 
-            registrations.forEach(reg => {
+            siegeDamageHistoryList.forEach(reg => {
+                const cell = CELLS_DATA.find(c => c.id == reg.cell_id);
+                const cellName = cell ? cell.name : reg.cell_id;
+                const info = typeInfo[reg.damage_type] || { label: reg.damage_type, icon: '⚔️' };
+                
+                const sign = reg.amount_delta > 0 ? '+' : '';
+                const formattedAmount = formatDamage(Math.abs(reg.amount_delta));
+
                 const row = document.createElement('div');
-                row.className = 'flex items-center justify-between gap-2 p-1.5 rounded-lg bg-slate-950/80 border border-slate-800';
+                row.className = 'flex items-center justify-between gap-2 p-1.5 rounded-lg bg-slate-950/80 border border-slate-800 text-xs';
                 row.innerHTML = `
                     <div class="min-w-0 flex items-center gap-1.5">
-                        <span class="text-slate-200 font-medium truncate" title="${reg.player}">${reg.player}</span>
+                        <span class="text-slate-200 font-medium truncate" title="${reg.player_name}">${reg.player_name}</span>
                         <span class="text-slate-500 shrink-0">→</span>
-                        <span class="text-slate-300 truncate" title="${reg.cellName}">${reg.cellName}</span>
+                        <span class="text-slate-300 truncate" title="${cellName}">${cellName}</span>
                     </div>
                     <div class="flex items-center gap-2 shrink-0 font-mono">
-                        <span class="text-amber-300" title="Тип урона">${reg.icon} ${reg.label}</span>
-                        <span class="text-slate-400 text-[10px] whitespace-nowrap" title="Время регистрации">🕐 ${formatDamageRegistrationTime(reg.createdAt)}</span>
+                        <span class="text-amber-300" title="Тип урона">${info.icon} ${sign}${formattedAmount}</span>
+                        <span class="text-slate-400 text-[10px] whitespace-nowrap" title="Время">🕐 ${formatDamageRegistrationTime(reg.created_at)}</span>
                     </div>
                 `;
                 listEl.appendChild(row);
             });
-        }
-
-        async function modifyDamage(type, delta) {
-            if (!selectedSiegeCellId || !currentPlayer) return;
-            
-            const owners = sheltersState[selectedSiegeCellId] || [];
-            if (type === 'shelter' && !owners.includes(currentPlayer)) {
-                alert('⛔ Удар из убежища доступен только владельцам этой клетки!');
-                return;
-            }
-
-            if (!siegeDamageState[selectedSiegeCellId]) siegeDamageState[selectedSiegeCellId] = {};
-            if (!siegeDamageState[selectedSiegeCellId][currentPlayer]) {
-                siegeDamageState[selectedSiegeCellId][currentPlayer] = { shelter: 0, dynamite: 0, bomb: 0 };
-            }
-
-            let currentVal = siegeDamageState[selectedSiegeCellId][currentPlayer][type] || 0;
-            let newVal = currentVal + delta;
-            if (newVal < 0) newVal = 0;
-
-            if (newVal === 0) {
-                delete siegeDamageState[selectedSiegeCellId][currentPlayer][type];
-                if (siegeDamageTimestamps[selectedSiegeCellId] &&
-                    siegeDamageTimestamps[selectedSiegeCellId][currentPlayer]) {
-                    delete siegeDamageTimestamps[selectedSiegeCellId][currentPlayer][type];
-                }
-            } else {
-                siegeDamageState[selectedSiegeCellId][currentPlayer][type] = newVal;
-            }
-
-            if (supabaseClient) {
-                const { data: existing, error: selectErr } = await supabaseClient
-                    .from('siege_damage')
-                    .select('id, created_at')
-                    .eq('cell_id', String(selectedSiegeCellId))
-                    .eq('player_name', currentPlayer)
-                    .eq('damage_type', type)
-                    .maybeSingle();
-
-                if (newVal === 0) {
-                    if (!selectErr && existing) {
-                        await supabaseClient.from('siege_damage').delete().eq('id', existing.id);
-                    }
-                } else if (!selectErr && existing) {
-                    if (!siegeDamageTimestamps[selectedSiegeCellId]) siegeDamageTimestamps[selectedSiegeCellId] = {};
-                    if (!siegeDamageTimestamps[selectedSiegeCellId][currentPlayer]) siegeDamageTimestamps[selectedSiegeCellId][currentPlayer] = {};
-                    siegeDamageTimestamps[selectedSiegeCellId][currentPlayer][type] = existing.created_at;
-                    await supabaseClient.from('siege_damage').update({ amount: newVal }).eq('id', existing.id);
-                } else {
-                    const { data: inserted, error: insertErr } = await supabaseClient.from('siege_damage').insert([{
-                        cell_id: String(selectedSiegeCellId),
-                        player_name: currentPlayer,
-                        damage_type: type,
-                        amount: newVal
-                    }]).select('created_at').single();
-
-                    if (!insertErr) {
-                        if (!siegeDamageTimestamps[selectedSiegeCellId]) siegeDamageTimestamps[selectedSiegeCellId] = {};
-                        if (!siegeDamageTimestamps[selectedSiegeCellId][currentPlayer]) siegeDamageTimestamps[selectedSiegeCellId][currentPlayer] = {};
-                        siegeDamageTimestamps[selectedSiegeCellId][currentPlayer][type] = inserted && inserted.created_at ? inserted.created_at : new Date().toISOString();
-                    }
-                }
-            }
-
-            if (newVal === 0 && siegeDamageState[selectedSiegeCellId][currentPlayer] &&
-                Object.values(siegeDamageState[selectedSiegeCellId][currentPlayer]).every(v => !v || v <= 0)) {
-                delete siegeDamageState[selectedSiegeCellId][currentPlayer];
-                if (siegeDamageTimestamps[selectedSiegeCellId]) delete siegeDamageTimestamps[selectedSiegeCellId][currentPlayer];
-            }
-
-            updateCardDamageDisplay(selectedSiegeCellId);
-            updateCardOwnersList(selectedSiegeCellId);
-            renderSiege(); 
-        }
-
-        async function resetMyDamage() {
-            if (!selectedSiegeCellId || !currentPlayer) return;
-            if (!confirm('Сбросить весь ваш урон по этой клетке?')) return;
-
-            if (supabaseClient) {
-                await supabaseClient.from('siege_damage')
-                    .delete()
-                    .eq('cell_id', String(selectedSiegeCellId))
-                    .eq('player_name', currentPlayer);
-            }
-
-            if (siegeDamageState[selectedSiegeCellId]) {
-                delete siegeDamageState[selectedSiegeCellId][currentPlayer];
-            }
-            if (siegeDamageTimestamps[selectedSiegeCellId]) {
-                delete siegeDamageTimestamps[selectedSiegeCellId][currentPlayer];
-            }
-
-            updateCardDamageDisplay(selectedSiegeCellId);
-            updateCardOwnersList(selectedSiegeCellId);
-            renderSiege();
         }
 
         async function officerClearCellDamage() {
@@ -2237,14 +2284,14 @@
             const stamp = zone.updated_at ? Date.parse(zone.updated_at) : Date.now();
             return Math.max(0, base - Math.max(0, Date.now() - stamp));
         }
-function formatZoneTimer(zone) {
-    if (!zone) return '—';
-    const ms = zoneRemainingMs(zone);
-    const totalMin = Math.floor(ms / 60000);
-    const hours = Math.floor(totalMin / 60);
-    const mins = totalMin % 60;
-    return `${String(hours).padStart(2,'0')}:${String(mins).padStart(2,'0')}`;
-}
+        function formatZoneTimer(zone) {
+            if (!zone) return '—';
+            const ms = zoneRemainingMs(zone);
+            const totalMin = Math.floor(ms / 60000);
+            const hours = Math.floor(totalMin / 60);
+            const mins = totalMin % 60;
+            return `${String(hours).padStart(2,'0')}:${String(mins).padStart(2,'0')}`;
+        }
         function updateZoneSyncLabel() {
             const el = document.getElementById('zone-sync-label');
             if (!el) return;
@@ -2267,139 +2314,159 @@ function formatZoneTimer(zone) {
         }
 
 async function importZoneJson() {
-    const msg = document.getElementById('zone-import-message');
-    if (!['officer','leader'].includes(currentUserRole)) return;
+            const msg = document.getElementById('zone-import-message');
+            if (!['officer','leader'].includes(currentUserRole)) return;
 
-    let rows;
-    try {
-        rows = normalizeZonePayload(JSON.parse(document.getElementById('zone-import-json').value));
-    } catch (e) {
-        msg.className = 'text-xs text-red-400';
-        msg.textContent = 'Ошибка JSON: ' + e.message;
-        return;
-    }
+            let rows;
+            try {
+                rows = normalizeZonePayload(JSON.parse(document.getElementById('zone-import-json').value));
+            } catch (e) {
+                msg.className = 'text-xs text-red-400';
+                msg.textContent = 'Ошибка JSON: ' + e.message;
+                return;
+            }
 
-    const validStates = ['free', 'siege', 'owned'];
-    const prepared = [];
-    const seen = new Set();
+            const validStates = ['free', 'siege', 'owned'];
+            const prepared = [];
+            const seen = new Set();
 
-    for (const item of rows) {
-        const code = String(item.code || item.regionCode || item.keyCode || '').trim().toUpperCase();
-        const cell = CELLS_DATA.find(c =>
-            c.key === code || c.name.toLowerCase() === String(item.name || '').toLowerCase()
-        );
+            for (const item of rows) {
+                const code = String(item.code || item.regionCode || item.keyCode || '').trim().toUpperCase();
+                const cell = CELLS_DATA.find(c =>
+                    c.key === code || c.name.toLowerCase() === String(item.name || '').toLowerCase()
+                );
 
-        if (!cell) continue;
+                if (!cell) continue;
 
-        if (seen.has(cell.key)) {
-            msg.className = 'text-xs text-red-400';
-            msg.textContent = `Повторяется земля ${cell.name}. Ничего не изменено.`;
-            return;
-        }
+                if (seen.has(cell.key)) {
+                    msg.className = 'text-xs text-red-400';
+                    msg.textContent = `Повторяется земля ${cell.name}. Ничего не изменено.`;
+                    return;
+                }
 
-        const state = validStates.includes(item.state)
-            ? item.state
-            : (String(item.status || '').toLowerCase().includes('осад')
-                ? 'siege'
-                : String(item.status || '').toLowerCase().includes('занят')
-                    ? 'owned'
-                    : 'free');
+                const state = validStates.includes(item.state)
+                    ? item.state
+                    : (String(item.status || '').toLowerCase().includes('осад')
+                        ? 'siege'
+                        : String(item.status || '').toLowerCase().includes('занят')
+                            ? 'owned'
+                            : 'free');
 
-        let ms = item.leftTimeMs;
-        if (ms === undefined) ms = item.leftTime;
-        ms = Number(ms || 0);
+                let ms = item.leftTimeMs;
+                if (ms === undefined) ms = item.leftTime;
+                ms = Number(ms || 0);
 
-        if (!Number.isFinite(ms) || ms < 0) {
-            msg.className = 'text-xs text-red-400';
-            msg.textContent = `Некорректный таймер для ${cell.name}. Ничего не изменено.`;
-            return;
-        }
+                if (!Number.isFinite(ms) || ms < 0) {
+                    msg.className = 'text-xs text-red-400';
+                    msg.textContent = `Некорректный таймер для ${cell.name}. Ничего не изменено.`;
+                    return;
+                }
 
-        let owner = item.owner;
-        if (owner && typeof owner === 'object') owner = owner.tag || owner.name || '';
-        owner = String(owner || '').replace(/^\[|\]$/g, '').slice(0, 4).toUpperCase();
+                let owner = item.owner;
+                if (owner && typeof owner === 'object') owner = owner.tag || owner.name || '';
+                owner = String(owner || '').replace(/^\[\vert{}\]$/g, '').slice(0, 4).toUpperCase();
 
-        prepared.push({
-            region: cell.key,
-            code: cell.key,
-            name: cell.name,
-            state,
-            owner: owner || null,
-            leftTimeMs: Math.floor(ms),
-            updated_at: new Date().toISOString()
-        });
+                prepared.push({
+                    region: cell.key,
+                    code: cell.key,
+                    name: cell.name,
+                    state,
+                    owner: owner || null,
+                    leftTimeMs: Math.floor(ms),
+                    updated_at: new Date().toISOString()
+                });
 
-        seen.add(cell.key);
-    }
+                seen.add(cell.key);
+            }
 
-    if (prepared.length !== CELLS_DATA.length || seen.size !== CELLS_DATA.length) {
-        const missing = CELLS_DATA.filter(c => !seen.has(c.key)).map(c => c.key).join(', ');
-        msg.className = 'text-xs text-red-400';
-        msg.textContent = `Импорт отменён: распознано ${prepared.length}/33 земель. Не найдены: ${missing || 'есть неизвестные/дублирующиеся записи'}. База не изменена.`;
-        return;
-    }
+            if (prepared.length !== CELLS_DATA.length || seen.size !== CELLS_DATA.length) {
+                const missing = CELLS_DATA.filter(c => !seen.has(c.key)).map(c => c.key).join(', ');
+                msg.className = 'text-xs text-red-400';
+                msg.textContent = `Импорт отменён: распознано ${prepared.length}/33 земель. Не найдены: ${missing || 'есть неизвестные/дублирующиеся записи'}. База не изменена.`;
+                return;
+            }
 
-    if (!supabaseClient) {
-        msg.className = 'text-xs text-red-400';
-        msg.textContent = 'Нет подключения к базе данных.';
-        return;
-    }
+            if (!supabaseClient) {
+                msg.className = 'text-xs text-red-400';
+                msg.textContent = 'Нет подключения к базе данных.';
+                return;
+            }
 
-    msg.className = 'text-xs text-amber-300';
-    msg.textContent = 'Синхронизация…';
-
-    const { error: upsertError } = await supabaseClient
-        .from('siege_zones')
-        .upsert(prepared, { onConflict: 'region' });
-
-    if (upsertError) {
-        msg.className = 'text-xs text-red-400';
-        msg.textContent = 'Ошибка записи: ' + upsertError.message;
-        return;
-    }
-
-    const { error: deleteError } = await supabaseClient
-        .from('siege_zones')
-        .delete()
-        .not('region', 'in', `(${prepared.map(r => `"${r.region}"`).join(',')})`);
-
-    if (deleteError) {
-        msg.className = 'text-xs text-red-400';
-        msg.textContent = 'Данные записаны, но очистка старых лишних строк не удалась: ' + deleteError.message;
-        return;
-    }
-
-    // Сбрасываем приоритет только у земель под контролем.
-    const ownedCellIds = prepared
-        .filter(zone => zone.state === 'owned')
-        .map(zone => {
-            const cell = CELLS_DATA.find(c => c.key === zone.region);
-            return cell ? String(cell.id) : null;
-        })
-        .filter(Boolean);
-
-    if (ownedCellIds.length) {
-        const { error: resetError } = await supabaseClient
-            .from('siege_cell_status')
-            .delete()
-            .in('id', ownedCellIds);
-
-        if (resetError) {
             msg.className = 'text-xs text-amber-300';
-            msg.textContent = 'Земли импортированы, но не удалось сбросить приоритеты: ' + resetError.message;
+            msg.textContent = 'Синхронизация…';
+
+            const { error: upsertError } = await supabaseClient
+                .from('siege_zones')
+                .upsert(prepared, { onConflict: 'region' });
+
+            if (upsertError) {
+                msg.className = 'text-xs text-red-400';
+                msg.textContent = 'Ошибка записи: ' + upsertError.message;
+                return;
+            }
+
+            const { error: deleteError } = await supabaseClient
+                .from('siege_zones')
+                .delete()
+                .not('region', 'in', `(${prepared.map(r => `"${r.region}"`).join(',')})`);
+
+            if (deleteError) {
+                msg.className = 'text-xs text-red-400';
+                msg.textContent = 'Данные записаны, но очистка старых лишних строк не удалась: ' + deleteError.message;
+                return;
+            }
+
+            // СОБИРАЕМ КЛЕТКИ, КОТОРЫЕ СТАЛИ СВОБОДНЫМИ (free)
+            const freeCellIds = prepared
+                .filter(zone => zone.state === 'free')
+                .map(zone => {
+                    const cell = CELLS_DATA.find(c => c.key === zone.region);
+                    return cell ? String(cell.id) : null;
+                })
+                .filter(Boolean);
+
+            // АВТОМАТИЧЕСКИ СБРАСЫВАЕМ ТЕКУЩИЙ УРОН ДЛЯ СВОБОДНЫХ ЗЕМЕЛЬ
+            if (freeCellIds.length) {
+                const { error: dmgResetError } = await supabaseClient
+                    .from('siege_damage')
+                    .delete()
+                    .in('cell_id', freeCellIds);
+
+                if (dmgResetError) {
+                    console.error("Ошибка автосброса урона для свободных земель:", dmgResetError);
+                }
+            }
+
+            const ownedCellIds = prepared
+                .filter(zone => zone.state === 'owned')
+                .map(zone => {
+                    const cell = CELLS_DATA.find(c => c.key === zone.region);
+                    return cell ? String(cell.id) : null;
+                })
+                .filter(Boolean);
+
+            if (ownedCellIds.length) {
+                const { error: resetError } = await supabaseClient
+                    .from('siege_cell_status')
+                    .delete()
+                    .in('id', ownedCellIds);
+
+                if (resetError) {
+                    msg.className = 'text-xs text-amber-300';
+                    msg.textContent = 'Земли импортированы, но не удалось сбросить приоритеты: ' + resetError.message;
+                    await loadDataFromSupabase();
+                    renderSiege();
+                    return;
+                }
+            }
+
             await loadDataFromSupabase();
             renderSiege();
-            return;
+
+            msg.className = 'text-xs text-emerald-300';
+            msg.textContent = 'Готово: все 33 земли синхронизированы. Урон по свободным землям обнулен.';
+            setTimeout(closeZoneImportModal, 1000);
         }
-    }
-
-    await loadDataFromSupabase();
-    renderSiege();
-
-    msg.className = 'text-xs text-emerald-300';
-    msg.textContent = 'Готово: все 33 земли синхронизированы. Старые таймеры заменены.';
-    setTimeout(closeZoneImportModal, 1000);
-}
 
         function refreshZoneCard(cellId) {
             const cell = CELLS_DATA.find(c => c.id == cellId); if (!cell) return;
@@ -2487,7 +2554,6 @@ async function importZoneJson() {
                 if (status === 2) iconSymbol = '⚡'; 
                 if (status === 3) iconSymbol = '🧱'; 
 
-                // Урон не загромождает карту: он остаётся в карточке клетки.
                 let innerHtmlContent = status > 0 ? `<span class="zone-priority-icon">${iconSymbol}</span>` : '';
 
                 const playersHere = iamHereState[cell.id] || [];
@@ -2506,14 +2572,12 @@ async function importZoneJson() {
                     wrapper.appendChild(flagBadge);
                 }
 
-                // Логика базовых классов плашки
                 let baseClass = 'siege-marker ';
                 if (status === 1) baseClass += 'siege-p1';
                 else if (status === 2) baseClass += 'siege-p2';
                 else if (status === 3) baseClass += 'siege-no-attack';
                 else baseClass += 'siege-neutral';
 
-                // Оверлей выделения при мульти-выборе
                 if (isSelected) {
                     baseClass += ' siege-cell-selected';
                     const checkOverlay = document.createElement('div');
@@ -2528,7 +2592,7 @@ async function importZoneJson() {
                     const zState = zone.state || 'free';
                     const statusColor = zState === 'siege' ? '#ef4444' : zState === 'owned' ? '#e2e8f0' : '#86efac';
                     const label = zState === 'siege' ? 'ОСАДА' : zState === 'owned' ? 'ЗАНЯТА' : 'СВОБОДНО';
-                    const rawTag = String(zone.owner || '').replace(/^\[|\]$/g,'').slice(0,4).toUpperCase();
+                    const rawTag = String(zone.owner || '').replace(/^\[\vert{}\]$/g,'').slice(0,4).toUpperCase();
                     const timerMarkup = `<span class="zone-timer-text">${formatZoneTimer(zone)}</span>`;
                     const statusMarkup = `<span class="zone-status-label" style="color:${statusColor}">${label}</span>`;
                     const ownerMarkup = zState === 'owned' && rawTag ? `<span class="zone-owner-tag">${rawTag}</span>` : '';
@@ -2554,7 +2618,6 @@ async function importZoneJson() {
                     wrapper.appendChild(missionBadge);
                 }
 
-                // Клик по клетке на карте
                 marker.onclick = (e) => {
                     e.stopPropagation();
                     if (isSelectMode) {
@@ -2616,7 +2679,6 @@ async function importZoneJson() {
             if (missionCount === 0) missionListContainer.innerHTML = '<span class="text-slate-500 text-[11px]">Миссия не задана</span>';
         }
 
-        // Старт работы при загрузке страницы
         window.addEventListener('DOMContentLoaded', checkAuthOnLoad);
         setInterval(() => { renderSiege(); if (selectedSiegeCellId && !document.getElementById('cell-card-modal').classList.contains('hidden')) refreshZoneCard(selectedSiegeCellId); }, 60000);
     </script>
