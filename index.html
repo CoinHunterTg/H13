@@ -32,10 +32,10 @@
             border-color: #fff;
         }
 
-        .rank-purple { background-color: rgba(147, 51, 234, 0.65); color: #fff; }
-        .rank-blue   { background-color: rgba(37, 99, 235, 0.65); color: #fff; }
-        .rank-green  { background-color: rgba(22, 163, 74, 0.65); color: #fff; }
-        .rank-yellow { background-color: rgba(202, 138, 4, 0.65); color: #fff; }
+        .rank-purple { background-color: rgba(147, 51, 234, 0.13); color: #fff; }
+        .rank-blue   { background-color: rgba(37, 99, 235, 0.13); color: #fff; }
+        .rank-green  { background-color: rgba(22, 163, 74, 0.13); color: #fff; }
+        .rank-yellow { background-color: rgba(202, 138, 4, 0.13); color: #fff; }
         
         .has-my-shelter {
             background-color: rgba(239, 68, 68, 0.95) !important;
@@ -53,6 +53,21 @@
             transform: translate(-50%, -50%) scale(1.2);
             z-index: 6;
             color: #fff !important;
+        }
+
+        .shelter-hit-pending {
+            animation: shelterPendingPulse 1.6s ease-in-out infinite;
+            outline: 2px solid rgba(251, 146, 60, .95) !important;
+            outline-offset: 2px;
+            z-index: 8;
+        }
+        .shelter-hit-done {
+            outline: 2px solid rgba(74, 222, 128, .95) !important;
+            outline-offset: 1px;
+        }
+        @keyframes shelterPendingPulse {
+            0%, 100% { box-shadow: 0 0 0 1px rgba(251,146,60,.35), 0 0 4px rgba(251,146,60,.25); }
+            50% { box-shadow: 0 0 0 4px rgba(251,146,60,.85), 0 0 13px rgba(251,146,60,.75); }
         }
 
         .has-players {
@@ -224,7 +239,10 @@
 
         <!-- ВКЛАДКА 1: ОСАДА -->
         <div id="tab-content-siege" class="flex flex-col gap-3 max-w-4xl mx-auto">
-            
+            <div class="flex flex-wrap items-center gap-x-4 gap-y-1 px-2 text-[10px] text-slate-300">
+                <span class="flex items-center gap-1"><span class="inline-block w-3 h-3 rounded-sm border-2 border-orange-400"></span> Пульсирует — нужно отметить удар из убежища</span>
+                <span class="flex items-center gap-1"><span class="inline-block w-3 h-3 rounded-sm border-2 border-green-400"></span> Зелёная рамка — удары отмечены</span>
+            </div>
             <!-- 1. ИГРОВАЯ КАРТА -->
             <div class="bg-slate-900/90 backdrop-blur p-2.5 rounded-xl border border-slate-800 flex flex-col items-center justify-center relative min-h-[520px]">
                 
@@ -239,7 +257,7 @@
                 </div>
 
                 <div class="w-full flex flex-wrap items-center justify-center gap-1.5 mt-8 mb-1 px-1 relative z-20" id="zone-map-toolbar">
-                    <span class="px-2.5 py-1.5 rounded-lg border border-slate-700 bg-slate-950/90 text-[10px] font-bold text-slate-200">🎯 Приоритет · ⏱ Таймер · 🏴 Статус</span>
+                    <span class="px-2.5 py-1.5 rounded-lg border border-slate-700 bg-slate-950/90 text-[10px] font-bold text-slate-200">🎯 Приоритет · ⏱ Таймер · 🏴 Статус · 🧭 Позиции игроков</span>
                     <button onclick="openZoneImportModal()" id="zone-import-open-btn" class="hidden px-2.5 py-1.5 rounded-lg border border-emerald-700 bg-emerald-950 text-emerald-300 text-[10px] font-bold">↻ Импорт данных JSON</button>
                     <span id="zone-sync-label" class="w-full text-center text-[9px] text-slate-200" style="-webkit-text-stroke:0.3px #000; text-shadow:0 1px 3px #000;">Данные земель ещё не загружены</span>
                 </div>
@@ -369,11 +387,16 @@
                     <div id="cells-layer" class="absolute inset-0"></div>
                 </div>
                 
-                <div class="mt-2.5">
+                <div class="mt-2.5 flex flex-wrap items-center justify-center gap-3">
+                    <label id="shelter-count-edit-label" class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer select-none bg-slate-900/80 border border-slate-700 rounded-lg px-3 py-2 transition-colors">
+                        <input id="shelter-count-edit-toggle" type="checkbox" onchange="setShelterCountEditMode(this.checked)" class="accent-amber-500">
+                        <span>✎ Точное количество</span>
+                    </label>
                     <button onclick="toggleAllForCurrentPlayer()" class="bg-amber-600 hover:bg-amber-500 text-white text-xs px-3 py-1.5 rounded-lg font-medium transition-colors shadow">
                         ⚡ Отметить все
                     </button>
                 </div>
+                <div id="shelter-count-edit-hint" class="mt-1 text-[10px] text-slate-500 text-center">Тап по клетке — отметить или снять владение</div>
             </div>
         </div>
     </div>
@@ -621,6 +644,8 @@
         ];
 
         let sheltersState = {}; 
+        let shelterCountEditMode = false;
+        let shelterCountsState = {}; // Количество убежищ игрока на каждой клетке
         let siegeState = {}; 
         let siegeMissionState = {}; 
         let siegeDamageState = {}; 
@@ -708,12 +733,17 @@
                 const { data: sheltersData } = await supabaseClient.from('shelters').select('*');
                 if (sheltersData) {
                     sheltersState = {};
+                    sheltersState = {};
+                    shelterCountsState = {};
                     sheltersData.forEach(row => {
-                        const cellId = row.shelter_type; 
+                        const cellId = row.shelter_type;
                         const player = row.player_name;
+                        const count = Math.max(1, Number(row.shelter_count || 1));
                         if (cellId && player) {
                             if (!sheltersState[cellId]) sheltersState[cellId] = [];
                             if (!sheltersState[cellId].includes(player)) sheltersState[cellId].push(player);
+                            if (!shelterCountsState[cellId]) shelterCountsState[cellId] = {};
+                            shelterCountsState[cellId][player] = count;
                         }
                     });
                 }
@@ -774,10 +804,15 @@
                 const { data: iamHereData } = await supabaseClient.from('iam_here').select('*');
                 if (iamHereData) {
                     iamHereState = {};
+                    iamHereTimestamps = {};
                     iamHereData.forEach(row => {
                         if (row.cell_id && row.player_name) {
                             if (!iamHereState[row.cell_id]) iamHereState[row.cell_id] = [];
                             if (!iamHereState[row.cell_id].includes(row.player_name)) iamHereState[row.cell_id].push(row.player_name);
+                            if (row.created_at) {
+                                if (!iamHereTimestamps[row.cell_id]) iamHereTimestamps[row.cell_id] = {};
+                                iamHereTimestamps[row.cell_id][row.player_name] = row.created_at;
+                            }
                         }
                     });
                 }
@@ -1321,12 +1356,19 @@
             await saveAnnouncement();
         }
 
+        function getShelterCount(cellId, nick) {
+            return Math.max(0, Number((shelterCountsState[cellId] || {})[nick] || 0));
+        }
+        function getCellShelterTotal(cellId) {
+            return (sheltersState[cellId] || []).reduce((sum, nick) => sum + getShelterCount(cellId, nick), 0);
+        }
+
         function getPlayerStats(nick) {
             let stats = { purple: 0, blue: 0, green: 0, yellow: 0 };
             for (const [cellId, players] of Object.entries(sheltersState)) {
                 if (players.includes(nick)) {
                     const cell = CELLS_DATA.find(c => c.id == cellId);
-                    if (cell && stats[cell.color] !== undefined) stats[cell.color]++;
+                    if (cell && stats[cell.color] !== undefined) stats[cell.color] += getShelterCount(cellId, nick);
                 }
             }
             return stats;
@@ -1344,7 +1386,7 @@
             let totalClanStats = { purple: 0, blue: 0, green: 0, yellow: 0 };
             for (const [cellId, players] of Object.entries(sheltersState)) {
                 const cell = CELLS_DATA.find(c => c.id == cellId);
-                if (cell && totalClanStats[cell.color] !== undefined) totalClanStats[cell.color] += players.length;
+                if (cell && totalClanStats[cell.color] !== undefined) totalClanStats[cell.color] += players.reduce((sum, nick) => sum + getShelterCount(cellId, nick), 0);
             }
 
             document.getElementById('total-clan-stats').innerHTML = `
@@ -1771,16 +1813,20 @@
                             sheltersState[cell.id] = sheltersState[cell.id].filter(p => p !== currentPlayer);
                             if (sheltersState[cell.id].length === 0) delete sheltersState[cell.id];
                         }
+                        if (shelterCountsState[cell.id]) delete shelterCountsState[cell.id][currentPlayer];
                     });
                 } else {
                     for (const cell of CELLS_DATA) {
                         if (!sheltersState[cell.id]) sheltersState[cell.id] = [];
                         if (!sheltersState[cell.id].includes(currentPlayer)) {
                             sheltersState[cell.id].push(currentPlayer);
-                            await supabaseClient.from('shelters').insert([{
+                            if (!shelterCountsState[cell.id]) shelterCountsState[cell.id] = {};
+                            shelterCountsState[cell.id][currentPlayer] = 1;
+                            await supabaseClient.from('shelters').upsert([{
                                 player_name: currentPlayer,
-                                shelter_type: String(cell.id)
-                            }]);
+                                shelter_type: String(cell.id),
+                                shelter_count: 1
+                            }], { onConflict: 'player_name,shelter_type' });
                         }
                     }
                 }
@@ -1792,6 +1838,27 @@
         function onMapError() {
             document.getElementById('map-img').style.display = 'none';
             document.getElementById('placeholder').classList.remove('hidden');
+        }
+
+        function setShelterCountEditMode(enabled) {
+            shelterCountEditMode = !!enabled;
+            const hint = document.getElementById('shelter-count-edit-hint');
+            const label = document.getElementById('shelter-count-edit-label');
+            if (label) {
+                label.classList.toggle('bg-amber-950/90', shelterCountEditMode);
+                label.classList.toggle('border-amber-500', shelterCountEditMode);
+                label.classList.toggle('text-amber-200', shelterCountEditMode);
+                label.classList.toggle('bg-slate-900/80', !shelterCountEditMode);
+                label.classList.toggle('border-slate-700', !shelterCountEditMode);
+                label.classList.toggle('text-slate-300', !shelterCountEditMode);
+            }
+            if (hint) {
+                hint.classList.toggle('text-amber-300', shelterCountEditMode);
+                hint.classList.toggle('text-slate-500', !shelterCountEditMode);
+                hint.textContent = shelterCountEditMode
+                    ? 'РЕЖИМ КОЛИЧЕСТВА: тап по клетке — ввести число убежищ (0 — снять владение)'
+                    : 'Тап по клетке — отметить или снять владение';
+            }
         }
 
         function renderCells() {
@@ -1806,7 +1873,7 @@
                 marker.style.height = `${cell.size}%`;
 
                 const playersOnCell = sheltersState[cell.id] || [];
-                const totalCount = playersOnCell.length;
+                const totalCount = getCellShelterTotal(cell.id);
                 const hasMyShelter = currentPlayer && playersOnCell.includes(currentPlayer);
                 const isHighlighted = viewingPlayer && playersOnCell.includes(viewingPlayer);
 
@@ -1815,31 +1882,46 @@
                 else if (totalCount > 0) marker.className = `cell-marker rank-${cell.color} has-players`;
                 else marker.className = `cell-marker rank-${cell.color}`;
 
+                const ownerSummary = playersOnCell.map(nick => `${nick} ×${getShelterCount(cell.id, nick)}`).join(', ');
                 marker.innerText = totalCount > 0 ? totalCount : '';
-                marker.title = `${cell.name}` + (totalCount > 0 ? `\nУбежищ (${totalCount}): ${playersOnCell.join(', ')}` : ' (Свободно)');
+                marker.title = `${cell.name}` + (totalCount > 0 ? `\nУбежищ (${totalCount}): ${ownerSummary}` : ' (Свободно)');
 
                 marker.onclick = async (e) => {
                     e.stopPropagation();
-                    if (!currentPlayer) return;
+                    if (!currentPlayer) { alert('⚠ Сначала выберите свой ник.'); return; }
                     if (viewingPlayer && viewingPlayer !== currentPlayer && currentUserRole !== 'officer') {
-                        alert('⛔ Запрещено редактировать чужие точки!');
-                        return;
+                        alert('⛔ Запрещено редактировать чужие точки!'); return;
                     }
-                    if (!sheltersState[cell.id]) sheltersState[cell.id] = [];
-                    const idx = sheltersState[cell.id].indexOf(currentPlayer);
-                    
-                    if (supabaseClient) {
-                        if (idx > -1) {
-                            sheltersState[cell.id].splice(idx, 1);
-                            if (sheltersState[cell.id].length === 0) delete sheltersState[cell.id];
-                            await supabaseClient.from('shelters').delete().eq('player_name', currentPlayer).eq('shelter_type', String(cell.id));
-                        } else {
-                            sheltersState[cell.id].push(currentPlayer);
-                            await supabaseClient.from('shelters').insert([{ player_name: currentPlayer, shelter_type: String(cell.id) }]);
+                    const oldCount = getShelterCount(cell.id, currentPlayer);
+                    let newCount;
+                    if (shelterCountEditMode) {
+                        const answer = prompt(`Сколько убежищ у вас на клетке «${cell.name}»?\nВведите точное количество. 0 — убрать отметку.`, String(oldCount));
+                        if (answer === null) return;
+                        if (!/^\d+$/.test(answer.trim())) { alert('Введите целое число: 0, 1, 2 и т. д.'); return; }
+                        newCount = Number(answer.trim());
+                        if (!Number.isSafeInteger(newCount) || newCount < 0 || newCount > 99) { alert('Допустимое количество: от 0 до 99.'); return; }
+                    } else {
+                        // Обычный режим сохраняет прежнюю механику: один тап добавляет 1, повторный снимает отметку.
+                        newCount = oldCount > 0 ? 0 : 1;
+                    }
+                    if (!supabaseClient) { alert('Нет соединения с базой данных.'); return; }
+                    let result;
+                    if (newCount === 0) {
+                        result = await supabaseClient.from('shelters').delete().eq('player_name', currentPlayer).eq('shelter_type', String(cell.id));
+                        if (sheltersState[cell.id]) {
+                            sheltersState[cell.id] = sheltersState[cell.id].filter(p => p !== currentPlayer);
+                            if (!sheltersState[cell.id].length) delete sheltersState[cell.id];
                         }
+                        if (shelterCountsState[cell.id]) delete shelterCountsState[cell.id][currentPlayer];
+                    } else {
+                        result = await supabaseClient.from('shelters').upsert([{ player_name: currentPlayer, shelter_type: String(cell.id), shelter_count: newCount }], { onConflict: 'player_name,shelter_type' });
+                        if (!sheltersState[cell.id]) sheltersState[cell.id] = [];
+                        if (!sheltersState[cell.id].includes(currentPlayer)) sheltersState[cell.id].push(currentPlayer);
+                        if (!shelterCountsState[cell.id]) shelterCountsState[cell.id] = {};
+                        shelterCountsState[cell.id][currentPlayer] = newCount;
                     }
-                    renderCells();
-                    renderPlayersList();
+                    if (result && result.error) { alert('Не удалось сохранить количество убежищ: ' + result.error.message); await loadDataFromSupabase(); return; }
+                    renderCells(); renderPlayersList(); renderSiege();
                 };
                 layer.appendChild(marker);
             });
@@ -1871,7 +1953,7 @@
 
             const cellOwners = sheltersState[cellId] || [];
             const sheltersNumEl = document.getElementById('cell-card-shelters-num');
-            if (sheltersNumEl) sheltersNumEl.textContent = cellOwners.length;
+            if (sheltersNumEl) sheltersNumEl.textContent = getCellShelterTotal(cellId);
 
             const officerPanel = document.getElementById('cell-card-officer-controls');
             if (['officer','leader'].includes(currentUserRole)) {
@@ -1980,7 +2062,7 @@
             let currentVal = tempDraftDamage[type] || 0;
             let newVal = currentVal + delta;
             if (newVal < 0) newVal = 0;
-            if (type === 'shelter' && newVal > 2000000000) newVal = 2000000000;
+            if (type === 'shelter' && newVal > getShelterCount(selectedSiegeCellId, currentPlayer) * 1000000000) newVal = getShelterCount(selectedSiegeCellId, currentPlayer) * 1000000000;
 
             tempDraftDamage[type] = newVal;
             updateCardDamageDisplay(selectedSiegeCellId);
@@ -1990,7 +2072,7 @@
             const owners = sheltersState[cellId] || [];
             const isOwner = owners.includes(currentPlayer);
             const shelterWrap = document.getElementById('card-shelter-wrap');
-            if (isOwner) shelterWrap.classList.remove('hidden');
+            if (isOwner) { shelterWrap.classList.remove('hidden'); shelterWrap.title = `Доступно ударов из убежища: ${getShelterCount(cellId, currentPlayer)}`; }
             else shelterWrap.classList.add('hidden');
 
             document.getElementById('card-my-dmg-shelter').textContent = formatDamage(tempDraftDamage.shelter || 0);
@@ -2139,7 +2221,7 @@
 
             const owners = sheltersState[cellId] || [];
             const sheltersNumEl = document.getElementById('cell-card-shelters-num');
-            if (sheltersNumEl) sheltersNumEl.textContent = owners.length;
+            if (sheltersNumEl) sheltersNumEl.textContent = getCellShelterTotal(cellId);
 
             const cellDamage = siegeDamageState[cellId] || {};
 
@@ -2179,7 +2261,7 @@
                 row.innerHTML = `
                     <div class="flex items-center gap-1.5 overflow-hidden">
                         <span class="truncate font-medium ${isOwner ? 'text-amber-400' : ''}">${nick}</span>
-                        ${isOwner ? '<span class="text-[9px] bg-amber-900/80 text-amber-200 px-1 py-0.2 rounded shrink-0" title="Владелец убежища">⛺</span>' : ''}
+                        ${isOwner ? `<span class="text-[9px] bg-amber-900/80 text-amber-200 px-1 py-0.2 rounded shrink-0" title="Количество убежищ">⛺ ×${getShelterCount(cellId, nick)}</span>` : ''}
                     </div>
                     <div class="flex items-center gap-1.5 shrink-0 font-mono">
                         <span class="font-bold text-amber-300 text-xs">${formatDamage(totalDmg)}</span>
@@ -2318,8 +2400,10 @@ async function importZoneJson() {
             if (!['officer','leader'].includes(currentUserRole)) return;
 
             let rows;
+            let parsedPayload;
             try {
-                rows = normalizeZonePayload(JSON.parse(document.getElementById('zone-import-json').value));
+                parsedPayload = JSON.parse(document.getElementById('zone-import-json').value);
+                rows = normalizeZonePayload(parsedPayload);
             } catch (e) {
                 msg.className = 'text-xs text-red-400';
                 msg.textContent = 'Ошибка JSON: ' + e.message;
@@ -2395,6 +2479,43 @@ async function importZoneJson() {
             msg.className = 'text-xs text-amber-300';
             msg.textContent = 'Синхронизация…';
 
+            // Если JSON содержит участников, синхронизируем их игровые позиции в общей таблице iam_here.
+            // Игроки, отсутствующие в JSON, сохраняют свои метки. created_at обновляется временем синхронизации.
+            const members = Array.isArray(parsedPayload?.members) ? parsedPayload.members : null;
+            let syncedPlayerCount = 0;
+            if (members) {
+                const locationRows = [];
+                const seenPlayers = new Set();
+                for (const member of members) {
+                    const nick = String(member.name || member.nickname || '').trim();
+                    const regionName = String(member.regionName || '').trim();
+                    if (!nick || !regionName || seenPlayers.has(nick.toLowerCase())) continue;
+                    const cell = CELLS_DATA.find(c => c.name.toLowerCase() === regionName.toLowerCase());
+                    if (!cell) continue;
+                    seenPlayers.add(nick.toLowerCase());
+                    locationRows.push({ cell_id: String(cell.id), player_name: nick });
+                }
+
+                if (locationRows.length) {
+                    const importedNames = locationRows.map(r => r.player_name);
+                    const { error: deleteLocationsError } = await supabaseClient
+                        .from('iam_here').delete().in('player_name', importedNames);
+                    if (deleteLocationsError) {
+                        msg.className = 'text-xs text-red-400';
+                        msg.textContent = 'Земли не импортированы: не удалось обновить метки iam_here. ' + deleteLocationsError.message;
+                        return;
+                    }
+                    const { error: insertLocationsError } = await supabaseClient
+                        .from('iam_here').insert(locationRows);
+                    if (insertLocationsError) {
+                        msg.className = 'text-xs text-red-400';
+                        msg.textContent = 'Земли импортированы не полностью: ошибка записи меток iam_here. ' + insertLocationsError.message;
+                        return;
+                    }
+                    syncedPlayerCount = locationRows.length;
+                }
+            }
+
             const { error: upsertError } = await supabaseClient
                 .from('siege_zones')
                 .upsert(prepared, { onConflict: 'region' });
@@ -2464,7 +2585,7 @@ async function importZoneJson() {
             renderSiege();
 
             msg.className = 'text-xs text-emerald-300';
-            msg.textContent = 'Готово: все 33 земли синхронизированы. Урон по свободным землям обнулен.';
+            msg.textContent = 'Готово: все 33 земли синхронизированы' + (members ? ` · метки игроков обновлены: ${syncedPlayerCount}` : ' · в JSON нет списка игроков') + '. Урон по свободным землям обнулен.';
             setTimeout(closeZoneImportModal, 1000);
         }
 
@@ -2477,19 +2598,88 @@ async function importZoneJson() {
             if (timer) timer.textContent = formatZoneTimer(zone);
         }
         async function saveZonePatch(cell, patch) {
-            if (!['officer','leader'].includes(currentUserRole) || !supabaseClient) return;
+            if (!['officer','leader'].includes(currentUserRole) || !supabaseClient) return false;
             const old = siegeZonesState[cell.key];
-            if (!old) { alert('Сначала импортируй игровые данные по всем землям.'); return; }
+            if (!old) { alert('Сначала импортируй игровые данные по всем землям.'); return false; }
             const remaining = zoneRemainingMs(old);
             const payload = { region: cell.key, code: cell.key, name: cell.name, state: old.state || 'free', owner: old.owner || null, leftTimeMs: remaining, updated_at: new Date().toISOString(), ...patch };
             const { error } = await supabaseClient.from('siege_zones').upsert(payload, { onConflict: 'region' });
-            if (error) { alert('Не удалось сохранить: '+error.message); return; }
+            if (error) { alert('Не удалось сохранить: '+error.message); return false; }
             await loadDataFromSupabase(); renderSiege(); refreshZoneCard(cell.id);
+            return true;
         }
         async function setZoneStatusFromCard(state) {
             if (!selectedSiegeCellId) return;
             const cell = CELLS_DATA.find(c=>c.id == selectedSiegeCellId); if (!cell) return;
-            await saveZonePatch(cell, {state});
+            const oldZone = siegeZonesState[cell.key];
+            if (state === 'free' && oldZone && oldZone.state !== 'free') {
+                const confirmed = confirm('Клетка станет свободной. Текущий урон будет сброшен, история атак сохранится. Продолжить?');
+                if (!confirmed) return;
+            }
+            const saved = await saveZonePatch(cell, {state});
+            if (!saved) return;
+            if (state === 'free' && oldZone && oldZone.state !== 'free') {
+                const { error } = await supabaseClient.from('siege_damage').delete().eq('cell_id', String(cell.id));
+                if (error) {
+                    alert('Статус изменён, но не удалось сбросить текущий урон: ' + error.message);
+                    return;
+                }
+                await loadDataFromSupabase(); renderSiege(); refreshZoneCard(cell.id);
+            }
+        }
+
+        // Автоматически переводит земли между этапами цикла по истечении таймера.
+        // Работает, когда сайт открыт; при следующем открытии проверит уже истёкшие таймеры.
+        let zoneCycleAdvanceRunning = false;
+        async function advanceExpiredZoneCycles() {
+            if (!supabaseClient || zoneCycleAdvanceRunning) return;
+            zoneCycleAdvanceRunning = true;
+            let changed = false;
+            try {
+                for (const cell of CELLS_DATA) {
+                    const zone = siegeZonesState[cell.key];
+                    if (!zone || !['siege', 'owned'].includes(zone.state)) continue;
+                    if (zoneRemainingMs(zone) > 0 || !zone.updated_at) continue;
+
+                    const nextState = zone.state === 'siege' ? 'owned' : 'free';
+                    const payload = {
+                        state: nextState,
+                        owner: nextState === 'free' ? null : (zone.owner || null),
+                        leftTimeMs: nextState === 'owned' ? 72 * 60 * 60 * 1000 : 0,
+                        updated_at: new Date().toISOString()
+                    };
+                    const { data, error } = await supabaseClient
+                        .from('siege_zones')
+                        .update(payload)
+                        .eq('region', cell.key)
+                        .eq('state', zone.state)
+                        .eq('updated_at', zone.updated_at)
+                        .select('region');
+                    if (error) {
+                        console.warn('Не удалось автоматически сменить этап цикла для ' + cell.name, error);
+                        continue;
+                    }
+                    if (!data || data.length === 0) continue; // Другой клиент уже обновил эту клетку.
+
+                    changed = true;
+                    if (nextState === 'free') {
+                        const { error: resetError } = await supabaseClient
+                            .from('siege_damage')
+                            .delete()
+                            .eq('cell_id', String(cell.id));
+                        if (resetError) console.error('Не удалось сбросить текущий урон для ' + cell.name, resetError);
+                    }
+                }
+                if (changed) {
+                    await loadDataFromSupabase();
+                    renderSiege();
+                    if (selectedSiegeCellId) refreshZoneCard(selectedSiegeCellId);
+                }
+            } catch (e) {
+                console.warn('Ошибка проверки таймеров земель:', e);
+            } finally {
+                zoneCycleAdvanceRunning = false;
+            }
         }
         async function adjustZoneTimer(amount, unit) {
             if (!selectedSiegeCellId) return;
@@ -2588,6 +2778,18 @@ async function importZoneJson() {
 
                 marker.className = baseClass;
                 const zone = siegeZonesState[cell.key];
+                const myShelterCount = currentPlayer ? getShelterCount(cell.id, currentPlayer) : 0;
+                const myShelterDamage = currentPlayer && siegeDamageState[cell.id] && siegeDamageState[cell.id][currentPlayer] ? Number(siegeDamageState[cell.id][currentPlayer].shelter || 0) : 0;
+                const myShelterHits = Math.floor(myShelterDamage / 1000000000);
+                if (currentPlayer && zone && zone.state === 'siege' && myShelterCount > 0) {
+                    if (myShelterHits < myShelterCount) {
+                        marker.classList.add('shelter-hit-pending');
+                        marker.title = `${cell.name}\n⛺ Не отмечено ударов из убежища: ${myShelterCount - myShelterHits} из ${myShelterCount}`;
+                    } else {
+                        marker.classList.add('shelter-hit-done');
+                        marker.title = `${cell.name}\n✅ Удары из убежища отмечены: ${myShelterHits}/${myShelterCount}`;
+                    }
+                }
                 if (zone) {
                     const zState = zone.state || 'free';
                     const statusColor = zState === 'siege' ? '#ef4444' : zState === 'owned' ? '#e2e8f0' : '#86efac';
@@ -2609,7 +2811,7 @@ async function importZoneJson() {
                     }
                 }
                 
-                marker.title = `${cell.name}` + (zone ? `\n${zoneStatusLabel(zone)} · ${formatZoneTimer(zone)}` : '') + (totalCellDmg > 0 ? `\nОбщий урон: ${formatDamage(totalCellDmg)}` : '');
+                marker.title = `${cell.name}` + (zone ? `\n${zoneStatusLabel(zone)} · ${formatZoneTimer(zone)}` : '') + (currentPlayer && zone && zone.state === 'siege' && myShelterCount > 0 ? (myShelterHits < myShelterCount ? `\n⛺ Не отмечено ударов из убежища: ${myShelterCount - myShelterHits} из ${myShelterCount}` : `\n✅ Удары из убежища отмечены: ${myShelterHits}/${myShelterCount}`) : '') + (totalCellDmg > 0 ? `\nОбщий урон: ${formatDamage(totalCellDmg)}` : '');
 
                 if (hasMission) {
                     const missionBadge = document.createElement('div');
@@ -2680,7 +2882,11 @@ async function importZoneJson() {
         }
 
         window.addEventListener('DOMContentLoaded', checkAuthOnLoad);
-        setInterval(() => { renderSiege(); if (selectedSiegeCellId && !document.getElementById('cell-card-modal').classList.contains('hidden')) refreshZoneCard(selectedSiegeCellId); }, 60000);
+        setInterval(() => {
+            advanceExpiredZoneCycles();
+            renderSiege();
+            if (selectedSiegeCellId && !document.getElementById('cell-card-modal').classList.contains('hidden')) refreshZoneCard(selectedSiegeCellId);
+        }, 60000);
     </script>
 </body>
 </html>
