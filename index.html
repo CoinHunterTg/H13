@@ -839,6 +839,7 @@
                     document.getElementById('main-app').classList.remove('hidden');
                     setupRoleUI();
                     renderApp();
+                    advanceExpiredZoneCycles();
                     setupRealtimeSubscriptions();
                     return;
                 } else {
@@ -938,6 +939,7 @@
             document.getElementById('main-app').classList.remove('hidden');
             setupRoleUI();
             renderApp();
+            advanceExpiredZoneCycles();
             setupRealtimeSubscriptions();
         }
 
@@ -997,83 +999,12 @@
             }
         }
 
+        // Realtime отключён намеренно: изменения хранятся в Supabase и загружаются
+        // при открытии/перезагрузке приложения. После собственных действий код
+        // по-прежнему обновляет локальный экран. Это исключает 9 постоянных подписок,
+        // каждая из которых раньше могла запускать повторную загрузку всех таблиц.
         function setupRealtimeSubscriptions() {
-            if (!supabaseClient) return;
-            
-            supabaseClient
-                .channel('public:fighters')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'fighters' }, async () => {
-                    await loadDataFromSupabase();
-                    renderApp();
-                })
-                .subscribe();
-
-            supabaseClient
-                .channel('public:siege_damage')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'siege_damage' }, async () => {
-                    await loadDataFromSupabase();
-                    renderApp();
-                })
-                .subscribe();
-
-            // Подписка на историю атак для мгновенного обновления Журнала у всех участников
-            supabaseClient
-                .channel('public:siege_damage_history')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'siege_damage_history' }, async () => {
-                    await loadDataFromSupabase();
-                    renderDamageRegistrations();
-                })
-                .subscribe();
-
-            supabaseClient
-                .channel('public:shelters')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'shelters' }, async () => {
-                    await loadDataFromSupabase();
-                    renderApp();
-                })
-                .subscribe();
-
-            supabaseClient
-                .channel('public:siege')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'siege' }, async () => {
-                    await loadDataFromSupabase();
-                    setupRoleUI();
-                    renderApp();
-                })
-                .subscribe();
-
-            supabaseClient
-                .channel('public:siege_cell_status')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'siege_cell_status' }, async () => {
-                    await loadDataFromSupabase();
-                    renderApp();
-                })
-                .subscribe();
-
-            supabaseClient
-                .channel('public:arsenal')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'arsenal' }, async () => {
-                    await loadDataFromSupabase();
-                    renderApp();
-                })
-                .subscribe();
-
-            supabaseClient
-                .channel('public:iam_here')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'iam_here' }, async () => {
-                    await loadDataFromSupabase();
-                    renderApp();
-                })
-                .subscribe();
-
-            supabaseClient
-                .channel('public:siege_zones')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'siege_zones' }, async () => {
-                    await loadDataFromSupabase();
-                    renderSiege();
-                    if (selectedSiegeCellId) refreshZoneCard(selectedSiegeCellId);
-                })
-                .subscribe();
+            return;
         }
 
         function renderApp() {
@@ -2635,6 +2566,7 @@ async function importZoneJson() {
             if (!supabaseClient || zoneCycleAdvanceRunning) return;
             zoneCycleAdvanceRunning = true;
             let changed = false;
+            let staleZoneFound = false;
             try {
                 for (const cell of CELLS_DATA) {
                     const zone = siegeZonesState[cell.key];
@@ -2659,7 +2591,12 @@ async function importZoneJson() {
                         console.warn('Не удалось автоматически сменить этап цикла для ' + cell.name, error);
                         continue;
                     }
-                    if (!data || data.length === 0) continue; // Другой клиент уже обновил эту клетку.
+                    if (!data || data.length === 0) {
+                        // Другой офицер/клиент уже сменил этап. Без Realtime обновляем
+                        // локальный снимок один раз, чтобы не повторять этот запрос каждую минуту.
+                        staleZoneFound = true;
+                        continue;
+                    }
 
                     changed = true;
                     if (nextState === 'free') {
@@ -2670,7 +2607,7 @@ async function importZoneJson() {
                         if (resetError) console.error('Не удалось сбросить текущий урон для ' + cell.name, resetError);
                     }
                 }
-                if (changed) {
+                if (changed || staleZoneFound) {
                     await loadDataFromSupabase();
                     renderSiege();
                     if (selectedSiegeCellId) refreshZoneCard(selectedSiegeCellId);
