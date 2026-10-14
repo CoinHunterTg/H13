@@ -2032,16 +2032,15 @@ function renderCells() {
                     delete shelterCountsState[cell.id][currentPlayer];
                 }
             } else {
-                result = await supabaseClient
-                    .from('shelters')
-                    .upsert([{
-                        player_name: currentPlayer,
-                        shelter_type: String(cell.id),
-                        shelter_count: newCount,
-                        updated_at: new Date().toISOString()
-                    }], {
-                        onConflict: 'player_name,shelter_type'
-                    });
+result = await supabaseClient
+    .from('shelters')
+    .upsert([{
+        player_name: currentPlayer,
+        shelter_type: String(cell.id),
+        shelter_count: newCount
+    }], {
+        onConflict: 'player_name,shelter_type'
+    });
 
                 if (result.error) {
                     alert('Не удалось сохранить количество убежищ: ' + result.error.message);
