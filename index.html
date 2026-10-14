@@ -888,7 +888,7 @@
                 const dbKey = savedRole === 'officer' ? 'officer_pin' : 'member_pin';
                 const { data, error } = await supabaseClient.from('access_pins').select('value').eq('key', dbKey).single();
                 if (error || !data) return false;
-                return data.value === savedPin;
+                return String(data.value) === savedPin;
             } catch (e) { return true; }
         }
 
