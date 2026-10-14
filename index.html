@@ -596,12 +596,19 @@
             tg.expand();
         }
 
-        const SUPABASE_URL = 'https://odlxxtzuchpaykttycgi.supabase.co';
-        const SUPABASE_ANON_KEY = 'sb_publishable_Qo59JT3EGIunTT-XJDvfxw_34sKna-7';
+        // НАСТРОЙКА НОВОГО ПРОЕКТА SUPABASE: замени только эти две строки.
+        // Нужны Project URL и Publishable key (sb_publishable_...) нового проекта.
+        // НИКОГДА не вставляй сюда Secret key / service_role.
+        const SUPABASE_URL = 'https://vinietsdwjzdleruigfd.supabase.co';
+        const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_7FH49avqh_fdvueXeJaFJQ_jSabi1y0';
         
         let supabaseClient = null;
-        if (SUPABASE_URL && SUPABASE_ANON_KEY) {
-            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const supabaseConfigured = /^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(SUPABASE_URL) &&
+            SUPABASE_PUBLISHABLE_KEY && !SUPABASE_PUBLISHABLE_KEY.startsWith('PASTE_');
+        if (supabaseConfigured && window.supabase) {
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+        } else {
+            console.warn('H13: вставь URL и Publishable key нового проекта Supabase в начале скрипта.');
         }
 
         let dynamicMembers = [];
@@ -722,20 +729,50 @@
             }
         }
 
-// ИСПРАВЛЕННАЯ ФУНКЦИЯ ЗАГРУЗКИ (добавлен безопасный запрос к истории)
-        async function loadDataFromSupabase() {
-            if (!supabaseClient) return;
+// Загрузка только указанных таблиц. При первом входе без параметров загружаются все данные;
+        // после действия перечитываются только таблицы, которых оно касается.
+        async function loadDataFromSupabase(tables = null) {
+            if (!supabaseClient) return false;
+
+            const allTables = [
+                'fighters', 'shelters', 'siege', 'siege_cell_status', 'siege_damage',
+                'siege_damage_history', 'arsenal', 'iam_here', 'siege_zones'
+            ];
+            const requested = new Set(Array.isArray(tables) ? tables : allTables);
+            const jobs = {};
+
+            if (requested.has('fighters')) jobs.fighters = supabaseClient.from('fighters').select('*');
+            if (requested.has('shelters')) jobs.shelters = supabaseClient.from('shelters').select('*');
+            if (requested.has('siege')) jobs.siege = supabaseClient.from('siege').select('*');
+            if (requested.has('siege_cell_status')) jobs.siege_cell_status = supabaseClient.from('siege_cell_status').select('*');
+            if (requested.has('siege_damage')) jobs.siege_damage = supabaseClient.from('siege_damage').select('*');
+            if (requested.has('siege_damage_history')) {
+                jobs.siege_damage_history = supabaseClient.from('siege_damage_history')
+                    .select('*').order('created_at', { ascending: false }).limit(50);
+            }
+            if (requested.has('arsenal')) jobs.arsenal = supabaseClient.from('arsenal').select('*');
+            if (requested.has('iam_here')) jobs.iam_here = supabaseClient.from('iam_here').select('*');
+            if (requested.has('siege_zones')) jobs.siege_zones = supabaseClient.from('siege_zones').select('*');
 
             try {
-                const { data: fightersData } = await supabaseClient.from('fighters').select('*');
-                if (fightersData) dynamicMembers = fightersData;
+                // Запрашиваем только необходимые таблицы, параллельно.
+                const pairs = await Promise.all(Object.entries(jobs).map(async ([name, query]) => [name, await query]));
+                const resultByTable = Object.fromEntries(pairs);
 
-                const { data: sheltersData } = await supabaseClient.from('shelters').select('*');
-                if (sheltersData) {
-                    sheltersState = {};
+                for (const [table, result] of Object.entries(resultByTable)) {
+                    if (result.error) {
+                        console.warn(`Не удалось загрузить таблицу ${table}:`, result.error);
+                    }
+                }
+
+                if (resultByTable.fighters && !resultByTable.fighters.error && resultByTable.fighters.data) {
+                    dynamicMembers = resultByTable.fighters.data;
+                }
+
+                if (resultByTable.shelters && !resultByTable.shelters.error && resultByTable.shelters.data) {
                     sheltersState = {};
                     shelterCountsState = {};
-                    sheltersData.forEach(row => {
+                    resultByTable.shelters.data.forEach(row => {
                         const cellId = row.shelter_type;
                         const player = row.player_name;
                         const count = Math.max(1, Number(row.shelter_count || 1));
@@ -748,27 +785,27 @@
                     });
                 }
 
-                const { data: siegeData } = await supabaseClient.from('siege').select('*');
-                if (siegeData && siegeData.length > 0) {
-                    const latest = siegeData[siegeData.length - 1];
-                    if (latest.announcement !== null) clanAnnouncement = latest.announcement;
-                    if (latest.mission_text !== null && latest.mission_text !== '') {
-                        try { siegeMissionState = JSON.parse(latest.mission_text); } catch(e) {}
+                if (resultByTable.siege && !resultByTable.siege.error && resultByTable.siege.data) {
+                    const siegeData = resultByTable.siege.data;
+                    if (siegeData.length > 0) {
+                        const latest = siegeData[siegeData.length - 1];
+                        if (latest.announcement !== null) clanAnnouncement = latest.announcement;
+                        if (latest.mission_text !== null && latest.mission_text !== '') {
+                            try { siegeMissionState = JSON.parse(latest.mission_text); } catch (e) {}
+                        }
                     }
                 }
 
-                const { data: statusData } = await supabaseClient.from('siege_cell_status').select('*');
-                if (statusData) {
+                if (resultByTable.siege_cell_status && !resultByTable.siege_cell_status.error && resultByTable.siege_cell_status.data) {
                     siegeState = {};
-                    statusData.forEach(row => {
-                        if (row.id && row.status !== undefined) siegeState[row.id] = Number(row.status); 
+                    resultByTable.siege_cell_status.data.forEach(row => {
+                        if (row.id && row.status !== undefined) siegeState[row.id] = Number(row.status);
                     });
                 }
 
-                const { data: dmgData } = await supabaseClient.from('siege_damage').select('*');
-                if (dmgData) {
+                if (resultByTable.siege_damage && !resultByTable.siege_damage.error && resultByTable.siege_damage.data) {
                     siegeDamageState = {};
-                    dmgData.forEach(row => {
+                    resultByTable.siege_damage.data.forEach(row => {
                         const cellId = row.cell_id;
                         const player = row.player_name;
                         const type = row.damage_type;
@@ -779,33 +816,21 @@
                     });
                 }
 
-                // Безопасная загрузка истории журнала атак
-                const { data: historyData, error: historyErr } = await supabaseClient
-                    .from('siege_damage_history')
-                    .select('*')
-                    .order('created_at', { ascending: false })
-                    .limit(50);
-                
-                if (!historyErr && historyData) {
-                    siegeDamageHistoryList = historyData;
-                } else {
-                    console.warn("Таблица siege_damage_history недоступна или пуста:", historyErr);
-                    siegeDamageHistoryList = [];
+                if (resultByTable.siege_damage_history && !resultByTable.siege_damage_history.error && resultByTable.siege_damage_history.data) {
+                    siegeDamageHistoryList = resultByTable.siege_damage_history.data;
                 }
 
-                const { data: arsenalData } = await supabaseClient.from('arsenal').select('*');
-                if (arsenalData) {
+                if (resultByTable.arsenal && !resultByTable.arsenal.error && resultByTable.arsenal.data) {
                     arsenalState = {};
-                    arsenalData.forEach(row => {
+                    resultByTable.arsenal.data.forEach(row => {
                         arsenalState[row.player_name] = { dynamite: row.dynamite || 0, bomb: row.bomb || 0 };
                     });
                 }
 
-                const { data: iamHereData } = await supabaseClient.from('iam_here').select('*');
-                if (iamHereData) {
+                if (resultByTable.iam_here && !resultByTable.iam_here.error && resultByTable.iam_here.data) {
                     iamHereState = {};
                     iamHereTimestamps = {};
-                    iamHereData.forEach(row => {
+                    resultByTable.iam_here.data.forEach(row => {
                         if (row.cell_id && row.player_name) {
                             if (!iamHereState[row.cell_id]) iamHereState[row.cell_id] = [];
                             if (!iamHereState[row.cell_id].includes(row.player_name)) iamHereState[row.cell_id].push(row.player_name);
@@ -817,14 +842,15 @@
                     });
                 }
 
-                const { data: zoneData } = await supabaseClient.from('siege_zones').select('*');
-                if (zoneData) {
+                if (resultByTable.siege_zones && !resultByTable.siege_zones.error && resultByTable.siege_zones.data) {
                     siegeZonesState = {};
-                    zoneData.forEach(row => { if (row.code) siegeZonesState[row.code] = row; });
+                    resultByTable.siege_zones.data.forEach(row => { if (row.code) siegeZonesState[row.code] = row; });
                     updateZoneSyncLabel();
                 }
+                return true;
             } catch (err) {
-                console.error("Ошибка загрузки данных из Supabase:", err);
+                console.error('Ошибка загрузки данных из Supabase:', err);
+                return false;
             }
         }
 
@@ -839,8 +865,6 @@
                     document.getElementById('main-app').classList.remove('hidden');
                     setupRoleUI();
                     renderApp();
-                    advanceExpiredZoneCycles();
-                    setupRealtimeSubscriptions();
                     return;
                 } else {
                     logout();
@@ -848,7 +872,7 @@
             }
             if (currentUserRole) {
                 document.getElementById('auth-screen').classList.add('hidden');
-                await loadDataFromSupabase();
+                await loadDataFromSupabase(['fighters']);
                 setupProfileSelector();
                 document.getElementById('select-profile-screen').classList.remove('hidden');
             }
@@ -880,7 +904,7 @@
 
                 let matchedRole = '';
                 data.forEach(row => {
-                    if (row.value === pin) {
+                    if (String(row.value) === pin) {
                         if (row.key === 'officer_pin') matchedRole = 'officer';
                         if (row.key === 'member_pin') matchedRole = 'member';
                     }
@@ -894,7 +918,7 @@
 
                 errorEl.classList.add('hidden');
                 document.getElementById('auth-screen').classList.add('hidden');
-                await loadDataFromSupabase();
+                await loadDataFromSupabase(['fighters']);
                 setupProfileSelector();
                 document.getElementById('select-profile-screen').classList.remove('hidden');
             } catch (err) {
@@ -939,8 +963,6 @@
             document.getElementById('main-app').classList.remove('hidden');
             setupRoleUI();
             renderApp();
-            advanceExpiredZoneCycles();
-            setupRealtimeSubscriptions();
         }
 
         function backToAuth() {
@@ -999,12 +1021,13 @@
             }
         }
 
-        // Realtime отключён намеренно: изменения хранятся в Supabase и загружаются
-        // при открытии/перезагрузке приложения. После собственных действий код
-        // по-прежнему обновляет локальный экран. Это исключает 9 постоянных подписок,
-        // каждая из которых раньше могла запускать повторную загрузку всех таблиц.
-        function setupRealtimeSubscriptions() {
-            return;
+        // Realtime намеренно отключён: участники видят свежие данные при входе/перезагрузке.
+        // После локальных действий загружаются только затронутые таблицы.
+
+        async function refreshH13Data() {
+            const ok = await loadDataFromSupabase();
+            if (ok) { setupRoleUI(); renderApp(); }
+            return ok;
         }
 
         function renderApp() {
@@ -1150,37 +1173,44 @@
             }
         }
 
-        async function addFighter() {
-            if (currentUserRole !== 'officer') {
-                alert('У вас нет прав для добавления бойцов.');
-                return;
-            }
+async function addFighter() {
+    if (currentUserRole !== 'officer') {
+        alert('У вас нет прав для добавления бойцов.');
+        return;
+    }
 
-            const input = document.getElementById('newFighterName');
-            const name = input.value.trim();
-            if (!name) return;
+    const input = document.getElementById('newFighterName');
+    const name = input.value.trim();
+    if (!name) return;
 
-            if (supabaseClient) {
-                const { error } = await supabaseClient
-                    .from('fighters')
-                    .insert([{ name: name, role: 'member' }]);
+    if (supabaseClient) {
+        const { error } = await supabaseClient
+            .from('fighters')
+            .insert([{
+                name: name,
+                role: 'member',
+                created_at: new Date().toISOString()
+            }]);
 
-                if (error) {
-                    alert('Ошибка при добавлении: ' + error.message);
-                    console.error(error);
-                } else {
-                    input.value = '';
-                    await loadDataFromSupabase();
-                    renderApp();
-                }
-            } else {
-                if (!dynamicMembers.some(m => m.name === name)) {
-                    dynamicMembers.push({ name: name, role: 'member' });
-                    input.value = '';
-                    renderApp();
-                }
-            }
+        if (error) {
+            alert('Ошибка при добавлении: ' + error.message);
+            console.error(error);
+        } else {
+            input.value = '';
+            await loadDataFromSupabase(['fighters']);
+            renderApp();
         }
+    } else {
+        if (!dynamicMembers.some(m => m.name === name)) {
+            dynamicMembers.push({
+                name: name,
+                role: 'member'
+            });
+            input.value = '';
+            renderApp();
+        }
+    }
+}
 
         function openDeleteModal(name) {
             if (currentUserRole !== 'officer') {
@@ -1203,18 +1233,46 @@
             closeDeleteModal();
 
             if (supabaseClient) {
+                // Удаляем персональные данные бойца из связанных таблиц до удаления его карточки.
+                // Общие данные осады и состояния игровых зон не трогаем.
+                const personalTables = [
+                    'shelters',
+                    'iam_here',
+                    'arsenal',
+                    'siege_damage',
+                    'siege_damage_history'
+                ];
+
+                for (const table of personalTables) {
+                    const { error } = await supabaseClient
+                        .from(table)
+                        .delete()
+                        .eq('player_name', name);
+
+                    if (error) {
+                        alert(`Не удалось полностью исключить бойца: ошибка удаления данных из таблицы ${table}. Карточка бойца пока сохранена.\n\n${error.message}`);
+                        console.error(`Ошибка удаления данных бойца из ${table}:`, error);
+                        await loadDataFromSupabase();
+                        renderApp();
+                        return;
+                    }
+                }
+
                 const { error } = await supabaseClient
                     .from('fighters')
                     .delete()
                     .eq('name', name);
 
                 if (error) {
-                    alert('Ошибка при удалении');
+                    alert('Личные данные удалены, но не удалось удалить запись бойца из таблицы fighters: ' + error.message);
                     console.error(error);
-                } else {
-                    await loadDataFromSupabase();
-                    renderApp();
                 }
+
+                await loadDataFromSupabase([
+                    'fighters', 'shelters', 'iam_here', 'arsenal',
+                    'siege_damage', 'siege_damage_history'
+                ]);
+                renderApp();
             } else {
                 dynamicMembers = dynamicMembers.filter(m => m.name !== name);
                 renderApp();
@@ -1237,7 +1295,7 @@
                     alert('Ошибка при обновлении роли в базе данных');
                     console.error(error);
                 } else {
-                    await loadDataFromSupabase();
+                    await loadDataFromSupabase(['fighters']);
                     renderApp();
                 }
             } else {
@@ -1574,37 +1632,57 @@
             }
         }
 
-        async function setPlayerIamHere(cellId) {
-            for (let cId in iamHereState) {
-                iamHereState[cId] = iamHereState[cId].filter(p => p !== currentPlayer);
-                if (iamHereState[cId].length === 0) delete iamHereState[cId];
-                if (iamHereTimestamps[cId]) {
-                    delete iamHereTimestamps[cId][currentPlayer];
-                    if (Object.keys(iamHereTimestamps[cId]).length === 0) delete iamHereTimestamps[cId];
-                }
+async function setPlayerIamHere(cellId) {
+    for (let cId in iamHereState) {
+        iamHereState[cId] = iamHereState[cId].filter(p => p !== currentPlayer);
+        if (iamHereState[cId].length === 0) delete iamHereState[cId];
+
+        if (iamHereTimestamps[cId]) {
+            delete iamHereTimestamps[cId][currentPlayer];
+            if (Object.keys(iamHereTimestamps[cId]).length === 0) {
+                delete iamHereTimestamps[cId];
             }
-            if (!iamHereState[cellId]) iamHereState[cellId] = [];
-            if (!iamHereTimestamps[cellId]) iamHereTimestamps[cellId] = {};
-            iamHereState[cellId].push(currentPlayer);
-
-            const localCreatedAt = new Date().toISOString();
-            iamHereTimestamps[cellId][currentPlayer] = localCreatedAt;
-
-            if (supabaseClient) {
-                await supabaseClient.from('iam_here').delete().eq('player_name', currentPlayer);
-                const { data: insertedRows } = await supabaseClient.from('iam_here').insert([{
-                    cell_id: String(cellId),
-                    player_name: currentPlayer
-                }]).select('created_at').single();
-
-                if (insertedRows && insertedRows.created_at) {
-                    iamHereTimestamps[cellId][currentPlayer] = insertedRows.created_at;
-                }
-            }
-
-            renderSiege();
-            renderCells();
         }
+    }
+
+    if (!iamHereState[cellId]) iamHereState[cellId] = [];
+    if (!iamHereTimestamps[cellId]) iamHereTimestamps[cellId] = {};
+
+    iamHereState[cellId].push(currentPlayer);
+
+    const localCreatedAt = new Date().toISOString();
+    iamHereTimestamps[cellId][currentPlayer] = localCreatedAt;
+
+    if (supabaseClient) {
+        const { error: deleteError } = await supabaseClient
+            .from('iam_here')
+            .delete()
+            .eq('player_name', currentPlayer);
+
+        if (deleteError) {
+            console.error('Ошибка удаления старой метки:', deleteError);
+        } else {
+            const { data: insertedRow, error: insertError } = await supabaseClient
+                .from('iam_here')
+                .insert([{
+                    cell_id: String(cellId),
+                    player_name: currentPlayer,
+                    created_at: localCreatedAt
+                }])
+                .select('created_at')
+                .single();
+
+            if (insertError) {
+                console.error('Ошибка сохранения новой метки:', insertError);
+            } else if (insertedRow?.created_at) {
+                iamHereTimestamps[cellId][currentPlayer] = insertedRow.created_at;
+            }
+        }
+    }
+
+    renderSiege();
+    renderCells();
+}
 
         async function toggleIamHereFromCard() {
             if (!selectedSiegeCellId) return;
@@ -1732,39 +1810,97 @@
             renderPlayersList();
         }
 
-        async function toggleAllForCurrentPlayer() {
-            if (!currentPlayer) { alert('⚠ Выберите ник!'); return; }
-            let hasAll = CELLS_DATA.every(c => (sheltersState[c.id] || []).includes(currentPlayer));
-            
-            if (supabaseClient) {
-                if (hasAll) {
-                    await supabaseClient.from('shelters').delete().eq('player_name', currentPlayer);
-                    CELLS_DATA.forEach(cell => {
-                        if (sheltersState[cell.id]) {
-                            sheltersState[cell.id] = sheltersState[cell.id].filter(p => p !== currentPlayer);
-                            if (sheltersState[cell.id].length === 0) delete sheltersState[cell.id];
-                        }
-                        if (shelterCountsState[cell.id]) delete shelterCountsState[cell.id][currentPlayer];
-                    });
-                } else {
-                    for (const cell of CELLS_DATA) {
-                        if (!sheltersState[cell.id]) sheltersState[cell.id] = [];
-                        if (!sheltersState[cell.id].includes(currentPlayer)) {
-                            sheltersState[cell.id].push(currentPlayer);
-                            if (!shelterCountsState[cell.id]) shelterCountsState[cell.id] = {};
-                            shelterCountsState[cell.id][currentPlayer] = 1;
-                            await supabaseClient.from('shelters').upsert([{
-                                player_name: currentPlayer,
-                                shelter_type: String(cell.id),
-                                shelter_count: 1
-                            }], { onConflict: 'player_name,shelter_type' });
-                        }
+async function toggleAllForCurrentPlayer() {
+    if (!currentPlayer) {
+        alert('⚠ Выберите ник!');
+        return;
+    }
+
+    let hasAll = CELLS_DATA.every(c =>
+        (sheltersState[c.id] || []).includes(currentPlayer)
+    );
+
+    if (supabaseClient) {
+        if (hasAll) {
+            const { error } = await supabaseClient
+                .from('shelters')
+                .delete()
+                .eq('player_name', currentPlayer);
+
+            if (error) {
+                console.error('Ошибка удаления убежищ:', error);
+                alert('Не удалось удалить убежища: ' + error.message);
+                return;
+            }
+
+            CELLS_DATA.forEach(cell => {
+                if (sheltersState[cell.id]) {
+                    sheltersState[cell.id] =
+                        sheltersState[cell.id].filter(
+                            p => p !== currentPlayer
+                        );
+
+                    if (sheltersState[cell.id].length === 0) {
+                        delete sheltersState[cell.id];
                     }
                 }
+
+                if (shelterCountsState[cell.id]) {
+                    delete shelterCountsState[cell.id][currentPlayer];
+                }
+            });
+        } else {
+            const rowsToUpsert = [];
+            const updatedAt = new Date().toISOString();
+
+            for (const cell of CELLS_DATA) {
+                if (!sheltersState[cell.id]) {
+                    sheltersState[cell.id] = [];
+                }
+
+                if (!sheltersState[cell.id].includes(currentPlayer)) {
+                    sheltersState[cell.id].push(currentPlayer);
+
+                    if (!shelterCountsState[cell.id]) {
+                        shelterCountsState[cell.id] = {};
+                    }
+
+                    shelterCountsState[cell.id][currentPlayer] = 1;
+
+                    rowsToUpsert.push({
+                        player_name: currentPlayer,
+                        shelter_type: String(cell.id),
+                        shelter_count: 1,
+                        updated_at: updatedAt
+                    });
+                }
             }
-            renderCells();
-            renderPlayersList();
+
+            if (rowsToUpsert.length) {
+                const { error } = await supabaseClient
+                    .from('shelters')
+                    .upsert(rowsToUpsert, {
+                        onConflict: 'player_name,shelter_type'
+                    });
+
+                if (error) {
+                    console.error(
+                        'Ошибка пакетного сохранения убежищ:',
+                        error
+                    );
+                    alert(
+                        'Не удалось сохранить все убежища: ' +
+                        error.message
+                    );
+                    await loadDataFromSupabase(['shelters']);
+                }
+            }
         }
+    }
+
+    renderCells();
+    renderPlayersList();
+}
 
         function onMapError() {
             document.getElementById('map-img').style.display = 'none';
@@ -1792,71 +1928,147 @@
             }
         }
 
-        function renderCells() {
-            const layer = document.getElementById('cells-layer');
-            if (!layer) return;
-            layer.innerHTML = '';
-            CELLS_DATA.forEach(cell => {
-                const marker = document.createElement('div');
-                marker.style.left = `${cell.x}%`;
-                marker.style.top = `${cell.y}%`;
-                marker.style.width = `${cell.size}%`;
-                marker.style.height = `${cell.size}%`;
+function renderCells() {
+    const layer = document.getElementById('cells-layer');
+    if (!layer) return;
 
-                const playersOnCell = sheltersState[cell.id] || [];
-                const totalCount = getCellShelterTotal(cell.id);
-                const hasMyShelter = currentPlayer && playersOnCell.includes(currentPlayer);
-                const isHighlighted = viewingPlayer && playersOnCell.includes(viewingPlayer);
+    layer.innerHTML = '';
 
-                if (isHighlighted) marker.className = 'cell-marker highlighted-shelter';
-                else if (hasMyShelter) marker.className = 'cell-marker has-my-shelter';
-                else if (totalCount > 0) marker.className = `cell-marker rank-${cell.color} has-players`;
-                else marker.className = `cell-marker rank-${cell.color}`;
+    CELLS_DATA.forEach(cell => {
+        const marker = document.createElement('div');
+        marker.style.left = `${cell.x}%`;
+        marker.style.top = `${cell.y}%`;
+        marker.style.width = `${cell.size}%`;
+        marker.style.height = `${cell.size}%`;
 
-                const ownerSummary = playersOnCell.map(nick => `${nick} ×${getShelterCount(cell.id, nick)}`).join(', ');
-                marker.innerText = totalCount > 0 ? totalCount : '';
-                marker.title = `${cell.name}` + (totalCount > 0 ? `\nУбежищ (${totalCount}): ${ownerSummary}` : ' (Свободно)');
+        const playersOnCell = sheltersState[cell.id] || [];
+        const totalCount = getCellShelterTotal(cell.id);
+        const hasMyShelter = currentPlayer && playersOnCell.includes(currentPlayer);
+        const isHighlighted = viewingPlayer && playersOnCell.includes(viewingPlayer);
 
-                marker.onclick = async (e) => {
-                    e.stopPropagation();
-                    if (!currentPlayer) { alert('⚠ Сначала выберите свой ник.'); return; }
-                    if (viewingPlayer && viewingPlayer !== currentPlayer && currentUserRole !== 'officer') {
-                        alert('⛔ Запрещено редактировать чужие точки!'); return;
+        if (isHighlighted) marker.className = 'cell-marker highlighted-shelter';
+        else if (hasMyShelter) marker.className = 'cell-marker has-my-shelter';
+        else if (totalCount > 0) marker.className = `cell-marker rank-${cell.color} has-players`;
+        else marker.className = `cell-marker rank-${cell.color}`;
+
+        const ownerSummary = playersOnCell
+            .map(nick => `${nick} ×${getShelterCount(cell.id, nick)}`)
+            .join(', ');
+
+        marker.innerText = totalCount > 0 ? totalCount : '';
+        marker.title = `${cell.name}` +
+            (totalCount > 0
+                ? `\nУбежищ (${totalCount}): ${ownerSummary}`
+                : ' (Свободно)');
+
+        marker.onclick = async (e) => {
+            e.stopPropagation();
+
+            if (!currentPlayer) {
+                alert('⚠ Сначала выберите свой ник.');
+                return;
+            }
+
+            if (viewingPlayer && viewingPlayer !== currentPlayer && currentUserRole !== 'officer') {
+                alert('⛔ Запрещено редактировать чужие точки!');
+                return;
+            }
+
+            const oldCount = getShelterCount(cell.id, currentPlayer);
+            let newCount;
+
+            if (shelterCountEditMode) {
+                const answer = prompt(
+                    `Сколько убежищ у вас на клетке «${cell.name}»?\nВведите точное количество. 0 — убрать отметку.`,
+                    String(oldCount)
+                );
+
+                if (answer === null) return;
+
+                if (!/^\d+$/.test(answer.trim())) {
+                    alert('Введите целое число: 0, 1, 2 и т. д.');
+                    return;
+                }
+
+                newCount = Number(answer.trim());
+
+                if (!Number.isSafeInteger(newCount) || newCount < 0 || newCount > 99) {
+                    alert('Допустимое количество: от 0 до 99.');
+                    return;
+                }
+            } else {
+                newCount = oldCount > 0 ? 0 : 1;
+            }
+
+            if (!supabaseClient) {
+                alert('Нет соединения с базой данных.');
+                return;
+            }
+
+            let result;
+
+            if (newCount === 0) {
+                result = await supabaseClient
+                    .from('shelters')
+                    .delete()
+                    .eq('player_name', currentPlayer)
+                    .eq('shelter_type', String(cell.id));
+
+                if (result.error) {
+                    alert('Не удалось удалить отметку: ' + result.error.message);
+                    return;
+                }
+
+                if (sheltersState[cell.id]) {
+                    sheltersState[cell.id] =
+                        sheltersState[cell.id].filter(p => p !== currentPlayer);
+
+                    if (!sheltersState[cell.id].length) {
+                        delete sheltersState[cell.id];
                     }
-                    const oldCount = getShelterCount(cell.id, currentPlayer);
-                    let newCount;
-                    if (shelterCountEditMode) {
-                        const answer = prompt(`Сколько убежищ у вас на клетке «${cell.name}»?\nВведите точное количество. 0 — убрать отметку.`, String(oldCount));
-                        if (answer === null) return;
-                        if (!/^\d+$/.test(answer.trim())) { alert('Введите целое число: 0, 1, 2 и т. д.'); return; }
-                        newCount = Number(answer.trim());
-                        if (!Number.isSafeInteger(newCount) || newCount < 0 || newCount > 99) { alert('Допустимое количество: от 0 до 99.'); return; }
-                    } else {
-                        // Обычный режим сохраняет прежнюю механику: один тап добавляет 1, повторный снимает отметку.
-                        newCount = oldCount > 0 ? 0 : 1;
-                    }
-                    if (!supabaseClient) { alert('Нет соединения с базой данных.'); return; }
-                    let result;
-                    if (newCount === 0) {
-                        result = await supabaseClient.from('shelters').delete().eq('player_name', currentPlayer).eq('shelter_type', String(cell.id));
-                        if (sheltersState[cell.id]) {
-                            sheltersState[cell.id] = sheltersState[cell.id].filter(p => p !== currentPlayer);
-                            if (!sheltersState[cell.id].length) delete sheltersState[cell.id];
-                        }
-                        if (shelterCountsState[cell.id]) delete shelterCountsState[cell.id][currentPlayer];
-                    } else {
-                        result = await supabaseClient.from('shelters').upsert([{ player_name: currentPlayer, shelter_type: String(cell.id), shelter_count: newCount }], { onConflict: 'player_name,shelter_type' });
-                        if (!sheltersState[cell.id]) sheltersState[cell.id] = [];
-                        if (!sheltersState[cell.id].includes(currentPlayer)) sheltersState[cell.id].push(currentPlayer);
-                        if (!shelterCountsState[cell.id]) shelterCountsState[cell.id] = {};
-                        shelterCountsState[cell.id][currentPlayer] = newCount;
-                    }
-                    if (result && result.error) { alert('Не удалось сохранить количество убежищ: ' + result.error.message); await loadDataFromSupabase(); return; }
-                    renderCells(); renderPlayersList(); renderSiege();
-                };
-                layer.appendChild(marker);
-            });
-        }
+                }
+
+                if (shelterCountsState[cell.id]) {
+                    delete shelterCountsState[cell.id][currentPlayer];
+                }
+            } else {
+                result = await supabaseClient
+                    .from('shelters')
+                    .upsert([{
+                        player_name: currentPlayer,
+                        shelter_type: String(cell.id),
+                        shelter_count: newCount,
+                        updated_at: new Date().toISOString()
+                    }], {
+                        onConflict: 'player_name,shelter_type'
+                    });
+
+                if (result.error) {
+                    alert('Не удалось сохранить количество убежищ: ' + result.error.message);
+                    await loadDataFromSupabase(['shelters']);
+                    renderCells();
+                    renderPlayersList();
+                    renderSiege();
+                    return;
+                }
+
+                if (!sheltersState[cell.id]) sheltersState[cell.id] = [];
+                if (!sheltersState[cell.id].includes(currentPlayer)) {
+                    sheltersState[cell.id].push(currentPlayer);
+                }
+
+                if (!shelterCountsState[cell.id]) shelterCountsState[cell.id] = {};
+                shelterCountsState[cell.id][currentPlayer] = newCount;
+            }
+
+            renderCells();
+            renderPlayersList();
+            renderSiege();
+        };
+
+        layer.appendChild(marker);
+    });
+}
 
         function formatDamage(val) {
             if (val >= 1000000000) return (val / 1000000000).toFixed(1) + 'B';
@@ -1938,47 +2150,76 @@
             });
         }
 
-        async function setCellStatusFromCard(status) {
-            if (currentUserRole !== 'officer' || !selectedSiegeCellId) return;
-            
-            if (status === 0) {
-                delete siegeState[selectedSiegeCellId];
+async function setCellStatusFromCard(status) {
+    if (currentUserRole !== 'officer' || !selectedSiegeCellId) return;
+
+    const cellId = String(selectedSiegeCellId);
+
+    if (supabaseClient) {
+        if (status === 0) {
+            const { error } = await supabaseClient
+                .from('siege_cell_status')
+                .delete()
+                .eq('id', cellId);
+
+            if (error) {
+                alert('Не удалось сбросить приоритет: ' + error.message);
+                return;
+            }
+
+            delete siegeState[selectedSiegeCellId];
+        } else {
+            const { data: existing, error: selectErr } = await supabaseClient
+                .from('siege_cell_status')
+                .select('id')
+                .eq('id', cellId)
+                .maybeSingle();
+
+            if (selectErr) {
+                alert('Не удалось проверить приоритет: ' + selectErr.message);
+                return;
+            }
+
+            const updateData = {
+                status: String(status),
+                updated_by: currentPlayer,
+                updated_at: new Date().toISOString()
+            };
+
+            let error;
+
+            if (existing) {
+                ({ error } = await supabaseClient
+                    .from('siege_cell_status')
+                    .update(updateData)
+                    .eq('id', cellId));
             } else {
-                siegeState[selectedSiegeCellId] = status;
+                ({ error } = await supabaseClient
+                    .from('siege_cell_status')
+                    .insert([{
+                        id: cellId,
+                        ...updateData
+                    }]));
             }
 
-            if (supabaseClient) {
-                if (status === 0) {
-                    await supabaseClient.from('siege_cell_status')
-                        .delete()
-                        .eq('id', String(selectedSiegeCellId));
-                } else {
-                    const { data: existing, error: selectErr } = await supabaseClient
-                        .from('siege_cell_status')
-                        .select('id')
-                        .eq('id', String(selectedSiegeCellId))
-                        .maybeSingle();
-
-                    if (!selectErr && existing) {
-                        await supabaseClient.from('siege_cell_status')
-                            .update({ 
-                                status: String(status),
-                                updated_by: currentPlayer 
-                            })
-                            .eq('id', existing.id);
-                    } else {
-                        await supabaseClient.from('siege_cell_status')
-                            .insert([{
-                                id: String(selectedSiegeCellId),
-                                status: String(status),
-                                updated_by: currentPlayer 
-                            }]);
-                    }
-                }
+            if (error) {
+                alert('Не удалось сохранить приоритет: ' + error.message);
+                return;
             }
-            updateCardOfficerStatusButtons(selectedSiegeCellId);
-            renderSiege();
+
+            siegeState[selectedSiegeCellId] = status;
         }
+    } else {
+        if (status === 0) {
+            delete siegeState[selectedSiegeCellId];
+        } else {
+            siegeState[selectedSiegeCellId] = status;
+        }
+    }
+
+    updateCardOfficerStatusButtons(selectedSiegeCellId);
+    renderSiege();
+}
 
         // Изменение значений локально (в буфере) без отправки в базу
         function adjustLocalDamage(type, delta) {
@@ -2016,134 +2257,185 @@
         }
 
 // ИСПРАВЛЕННАЯ ФУНКЦИЯ ПОДТВЕРЖДЕНИЯ АТАКИ (с записью дельты в историю)
-        async function commitMyDamage() {
-            if (!selectedSiegeCellId || !currentPlayer) return;
+async function commitMyDamage() {
+    if (!selectedSiegeCellId || !currentPlayer) return;
 
-            const cellId = selectedSiegeCellId;
-            const savedDmg = (siegeDamageState[cellId] && siegeDamageState[cellId][currentPlayer]) || { shelter: 0, dynamite: 0, bomb: 0 };
+    const cellId = selectedSiegeCellId;
+    const savedDmg = (siegeDamageState[cellId] &&
+        siegeDamageState[cellId][currentPlayer]) ||
+        { shelter: 0, dynamite: 0, bomb: 0 };
 
-            const diffs = [
-                { type: 'shelter', delta: (tempDraftDamage.shelter || 0) - (savedDmg.shelter || 0) },
-                { type: 'dynamite', delta: (tempDraftDamage.dynamite || 0) - (savedDmg.dynamite || 0) },
-                { type: 'bomb', delta: (tempDraftDamage.bomb || 0) - (savedDmg.bomb || 0) }
-            ];
+    const diffs = [
+        { type: 'shelter', delta: (tempDraftDamage.shelter || 0) - (savedDmg.shelter || 0) },
+        { type: 'dynamite', delta: (tempDraftDamage.dynamite || 0) - (savedDmg.dynamite || 0) },
+        { type: 'bomb', delta: (tempDraftDamage.bomb || 0) - (savedDmg.bomb || 0) }
+    ];
 
-            const hasChanges = diffs.some(d => d.delta !== 0);
-            if (!hasChanges) {
-                alert('ℹ Нет изменений для подтверждения.');
+    if (!diffs.some(d => d.delta !== 0)) {
+        alert('ℹ Нет изменений для подтверждения.');
+        return;
+    }
+
+    if (!siegeDamageState[cellId]) siegeDamageState[cellId] = {};
+
+    for (const item of diffs) {
+        const newVal = tempDraftDamage[item.type] || 0;
+
+        if (!siegeDamageState[cellId][currentPlayer]) {
+            siegeDamageState[cellId][currentPlayer] =
+                { shelter: 0, dynamite: 0, bomb: 0 };
+        }
+
+        siegeDamageState[cellId][currentPlayer][item.type] = newVal;
+    }
+
+    if (Object.values(siegeDamageState[cellId][currentPlayer]).every(v => v === 0)) {
+        delete siegeDamageState[cellId][currentPlayer];
+    }
+
+    updateCardOwnersList(cellId);
+    renderSiege();
+
+    if (supabaseClient) {
+        for (const item of diffs) {
+            const newVal = tempDraftDamage[item.type] || 0;
+            const { data: existing, error: findError } = await supabaseClient
+                .from('siege_damage')
+                .select('id')
+                .eq('cell_id', String(cellId))
+                .eq('player_name', currentPlayer)
+                .eq('damage_type', item.type)
+                .maybeSingle();
+
+            if (findError) {
+                alert('Ошибка поиска урона: ' + findError.message);
+                await loadDataFromSupabase(['siege_damage']);
                 return;
             }
 
-            if (!siegeDamageState[cellId]) siegeDamageState[cellId] = {};
-            
-            for (const item of diffs) {
-                const newVal = tempDraftDamage[item.type];
-                if (newVal === 0) {
-                    if (siegeDamageState[cellId][currentPlayer]) {
-                        delete siegeDamageState[cellId][currentPlayer][item.type];
+            if (newVal === 0) {
+                if (existing) {
+                    const { error } = await supabaseClient
+                        .from('siege_damage')
+                        .delete()
+                        .eq('id', existing.id);
+
+                    if (error) {
+                        alert('Ошибка удаления урона: ' + error.message);
+                        return;
                     }
-                } else {
-                    if (!siegeDamageState[cellId][currentPlayer]) siegeDamageState[cellId][currentPlayer] = { shelter: 0, dynamite: 0, bomb: 0 };
-                    siegeDamageState[cellId][currentPlayer][item.type] = newVal;
+                }
+            } else if (existing) {
+                const { error } = await supabaseClient
+                    .from('siege_damage')
+                    .update({ amount: newVal })
+                    .eq('id', existing.id);
+
+                if (error) {
+                    alert('Ошибка обновления урона: ' + error.message);
+                    return;
+                }
+            } else {
+                const { error } = await supabaseClient
+                    .from('siege_damage')
+                    .insert([{
+                        cell_id: String(cellId),
+                        player_name: currentPlayer,
+                        damage_type: item.type,
+                        amount: newVal,
+                        created_at: new Date().toISOString()
+                    }]);
+
+                if (error) {
+                    alert('Ошибка сохранения урона: ' + error.message);
+                    await loadDataFromSupabase(['siege_damage']);
+                    return;
                 }
             }
 
-            if (siegeDamageState[cellId][currentPlayer] && Object.values(siegeDamageState[cellId][currentPlayer]).every(v => v === 0)) {
-                delete siegeDamageState[cellId][currentPlayer];
-            }
+            if (item.delta !== 0) {
+                const { error: histErr } = await supabaseClient
+                    .from('siege_damage_history')
+                    .insert([{
+                        cell_id: String(cellId),
+                        player_name: currentPlayer,
+                        damage_type: item.type,
+                        amount_delta: item.delta,
+                        created_at: new Date().toISOString()
+                    }]);
 
-            updateCardOwnersList(cellId);
-            renderSiege();
-
-            if (supabaseClient) {
-                for (const item of diffs) {
-                    const newVal = tempDraftDamage[item.type];
-                    
-                    if (newVal === 0) {
-                        await supabaseClient.from('siege_damage')
-                            .delete()
-                            .eq('cell_id', String(cellId))
-                            .eq('player_name', currentPlayer)
-                            .eq('damage_type', item.type);
-                    } else {
-                        const { data: existing } = await supabaseClient
-                            .from('siege_damage')
-                            .select('id')
-                            .eq('cell_id', String(cellId))
-                            .eq('player_name', currentPlayer)
-                            .eq('damage_type', item.type)
-                            .maybeSingle();
-
-                        if (existing) {
-                            await supabaseClient.from('siege_damage')
-                                .update({ amount: newVal })
-                                .eq('id', existing.id);
-                        } else {
-                            await supabaseClient.from('siege_damage').insert([{
-                                cell_id: String(cellId),
-                                player_name: currentPlayer,
-                                damage_type: item.type,
-                                amount: newVal
-                            }]);
-                        }
-                    }
-
-                    // Записываем изменение в историю только если дельта не нулевая
-                    if (item.delta !== 0) {
-                        const { error: histErr } = await supabaseClient.from('siege_damage_history').insert([{
-                            cell_id: String(cellId),
-                            player_name: currentPlayer,
-                            damage_type: item.type,
-                            amount_delta: item.delta
-                        }]);
-                        if (histErr) console.error("Ошибка записи истории атак:", histErr);
-                    }
+                if (histErr) {
+                    console.error('Ошибка записи истории атак:', histErr);
+                    alert('Урон сохранён, но ошибка записи истории: ' + histErr.message);
                 }
             }
-
-            // Перезагружаем актуальные данные истории с сервера
-            await loadDataFromSupabase();
-            renderDamageRegistrations();
-
-            alert('✅ Успешно зафиксировано!');
-            openCellCardModal(cellId);
         }
+    }
+
+    await loadDataFromSupabase(['siege_damage', 'siege_damage_history']);
+    renderDamageRegistrations();
+
+    alert('✅ Успешно зафиксировано!');
+    openCellCardModal(cellId);
+}
 
         // ИСПРАВЛЕННАЯ ФУНКЦИЯ СБРОСА УРОНА
-        async function resetMyDamage() {
-            if (!selectedSiegeCellId || !currentPlayer) return;
-            if (!confirm('Сбросить весь ваш урон по этой клетке?')) return;
+async function resetMyDamage() {
+    if (!selectedSiegeCellId || !currentPlayer) return;
+    if (!confirm('Сбросить весь ваш урон по этой клетке?')) return;
 
-            const cellId = selectedSiegeCellId;
-            const savedDmg = (siegeDamageState[cellId] && siegeDamageState[cellId][currentPlayer]) || { shelter: 0, dynamite: 0, bomb: 0 };
+    const cellId = selectedSiegeCellId;
+    const savedDmg = (siegeDamageState[cellId] &&
+        siegeDamageState[cellId][currentPlayer]) ||
+        { shelter: 0, dynamite: 0, bomb: 0 };
 
-            if (supabaseClient) {
-                for (const type of ['shelter', 'dynamite', 'bomb']) {
-                    const val = savedDmg[type] || 0;
-                    if (val > 0) {
-                        await supabaseClient.from('siege_damage_history').insert([{
-                            cell_id: String(cellId),
-                            player_name: currentPlayer,
-                            damage_type: type,
-                            amount_delta: -val
-                        }]);
-                    }
+    if (supabaseClient) {
+        for (const type of ['shelter', 'dynamite', 'bomb']) {
+            const val = savedDmg[type] || 0;
+
+            if (val > 0) {
+                const { error } = await supabaseClient
+                    .from('siege_damage_history')
+                    .insert([{
+                        cell_id: String(cellId),
+                        player_name: currentPlayer,
+                        damage_type: type,
+                        amount_delta: -val,
+                        created_at: new Date().toISOString()
+                    }]);
+
+                if (error) {
+                    alert('Ошибка записи истории сброса: ' + error.message);
+                    return;
                 }
-                await supabaseClient.from('siege_damage')
-                    .delete()
-                    .eq('cell_id', String(cellId))
-                    .eq('player_name', currentPlayer);
             }
-
-            if (siegeDamageState[cellId]) delete siegeDamageState[cellId][currentPlayer];
-            tempDraftDamage = { shelter: 0, dynamite: 0, bomb: 0 };
-
-            await loadDataFromSupabase();
-            updateCardDamageDisplay(cellId);
-            updateCardOwnersList(cellId);
-            renderSiege();
-            alert('✅ Ваш урон по этой клетке сброшен.');
         }
+
+        const { error } = await supabaseClient
+            .from('siege_damage')
+            .delete()
+            .eq('cell_id', String(cellId))
+            .eq('player_name', currentPlayer);
+
+        if (error) {
+            alert('Ошибка сброса урона: ' + error.message);
+            return;
+        }
+    }
+
+    if (siegeDamageState[cellId]) {
+        delete siegeDamageState[cellId][currentPlayer];
+    }
+
+    tempDraftDamage = { shelter: 0, dynamite: 0, bomb: 0 };
+
+    await loadDataFromSupabase(['siege_damage', 'siege_damage_history']);
+    updateCardDamageDisplay(cellId);
+    updateCardOwnersList(cellId);
+    renderSiege();
+
+    alert('✅ Ваш урон по этой клетке сброшен.');
+}
 
         function updateCardOwnersList(cellId) {
             const listEl = document.getElementById('card-siege-owners-list');
@@ -2410,40 +2702,102 @@ async function importZoneJson() {
             msg.className = 'text-xs text-amber-300';
             msg.textContent = 'Синхронизация…';
 
-            // Если JSON содержит участников, синхронизируем их игровые позиции в общей таблице iam_here.
-            // Игроки, отсутствующие в JSON, сохраняют свои метки. created_at обновляется временем синхронизации.
+            // Синхронизация игровых позиций в iam_here с сохранением created_at.
             const members = Array.isArray(parsedPayload?.members) ? parsedPayload.members : null;
             let syncedPlayerCount = 0;
+
             if (members) {
                 const locationRows = [];
                 const seenPlayers = new Set();
+
                 for (const member of members) {
                     const nick = String(member.name || member.nickname || '').trim();
                     const regionName = String(member.regionName || '').trim();
+
                     if (!nick || !regionName || seenPlayers.has(nick.toLowerCase())) continue;
-                    const cell = CELLS_DATA.find(c => c.name.toLowerCase() === regionName.toLowerCase());
+
+                    const cell = CELLS_DATA.find(
+                        c => c.name.toLowerCase() === regionName.toLowerCase()
+                    );
+
                     if (!cell) continue;
+
                     seenPlayers.add(nick.toLowerCase());
-                    locationRows.push({ cell_id: String(cell.id), player_name: nick });
+
+                    locationRows.push({
+                        cell_id: String(cell.id),
+                        player_name: nick
+                    });
                 }
 
                 if (locationRows.length) {
                     const importedNames = locationRows.map(r => r.player_name);
+
+                    // Получаем существующие метки и время их создания.
+                    const { data: existingLocations, error: readLocationsError } =
+                        await supabaseClient
+                            .from('iam_here')
+                            .select('id, player_name, created_at')
+                            .in('player_name', importedNames);
+
+                    if (readLocationsError) {
+                        msg.className = 'text-xs text-red-400';
+                        msg.textContent =
+                            'Ошибка чтения меток iam_here: ' + readLocationsError.message;
+                        return;
+                    }
+
+                    const existingByName = new Map();
+
+                    for (const row of existingLocations || []) {
+                        const key = String(row.player_name).toLowerCase();
+
+                        if (!existingByName.has(key)) {
+                            existingByName.set(key, row);
+                        }
+                    }
+
+                    // Удаляем прежние метки только тех игроков, чьи позиции пришли из парсера.
                     const { error: deleteLocationsError } = await supabaseClient
-                        .from('iam_here').delete().in('player_name', importedNames);
+                        .from('iam_here')
+                        .delete()
+                        .in('player_name', importedNames);
+
                     if (deleteLocationsError) {
                         msg.className = 'text-xs text-red-400';
-                        msg.textContent = 'Земли не импортированы: не удалось обновить метки iam_here. ' + deleteLocationsError.message;
+                        msg.textContent =
+                            'Не удалось обновить метки iam_here: ' +
+                            deleteLocationsError.message;
                         return;
                     }
+
+                    // Сохраняем исходное время; новым игрокам задаём текущее.
+                    const syncTime = new Date().toISOString();
+
+                    const rowsToInsert = locationRows.map(row => {
+                        const previous = existingByName.get(
+                            row.player_name.toLowerCase()
+                        );
+
+                        return {
+                            ...row,
+                            created_at: previous?.created_at || syncTime
+                        };
+                    });
+
                     const { error: insertLocationsError } = await supabaseClient
-                        .from('iam_here').insert(locationRows);
+                        .from('iam_here')
+                        .insert(rowsToInsert);
+
                     if (insertLocationsError) {
                         msg.className = 'text-xs text-red-400';
-                        msg.textContent = 'Земли импортированы не полностью: ошибка записи меток iam_here. ' + insertLocationsError.message;
+                        msg.textContent =
+                            'Ошибка записи меток iam_here: ' +
+                            insertLocationsError.message;
                         return;
                     }
-                    syncedPlayerCount = locationRows.length;
+
+                    syncedPlayerCount = rowsToInsert.length;
                 }
             }
 
@@ -2506,13 +2860,13 @@ async function importZoneJson() {
                 if (resetError) {
                     msg.className = 'text-xs text-amber-300';
                     msg.textContent = 'Земли импортированы, но не удалось сбросить приоритеты: ' + resetError.message;
-                    await loadDataFromSupabase();
+                    await loadDataFromSupabase(['siege_zones', 'iam_here', 'siege_damage', 'siege_cell_status']);
                     renderSiege();
                     return;
                 }
             }
 
-            await loadDataFromSupabase();
+            await loadDataFromSupabase(['siege_zones', 'iam_here', 'siege_damage', 'siege_cell_status']);
             renderSiege();
 
             msg.className = 'text-xs text-emerald-300';
@@ -2536,7 +2890,7 @@ async function importZoneJson() {
             const payload = { region: cell.key, code: cell.key, name: cell.name, state: old.state || 'free', owner: old.owner || null, leftTimeMs: remaining, updated_at: new Date().toISOString(), ...patch };
             const { error } = await supabaseClient.from('siege_zones').upsert(payload, { onConflict: 'region' });
             if (error) { alert('Не удалось сохранить: '+error.message); return false; }
-            await loadDataFromSupabase(); renderSiege(); refreshZoneCard(cell.id);
+            await loadDataFromSupabase(['siege_zones']); renderSiege(); refreshZoneCard(cell.id);
             return true;
         }
         async function setZoneStatusFromCard(state) {
@@ -2555,18 +2909,18 @@ async function importZoneJson() {
                     alert('Статус изменён, но не удалось сбросить текущий урон: ' + error.message);
                     return;
                 }
-                await loadDataFromSupabase(); renderSiege(); refreshZoneCard(cell.id);
+                await loadDataFromSupabase(['siege_damage']); renderSiege(); refreshZoneCard(cell.id);
             }
         }
 
         // Автоматически переводит земли между этапами цикла по истечении таймера.
-        // Работает, когда сайт открыт; при следующем открытии проверит уже истёкшие таймеры.
+        // Проверяет истёкшие таймеры только в сессии офицера/лидера; участники не запускают параллельные записи.
         let zoneCycleAdvanceRunning = false;
         async function advanceExpiredZoneCycles() {
-            if (!supabaseClient || zoneCycleAdvanceRunning) return;
+            if (!supabaseClient || zoneCycleAdvanceRunning || !['officer', 'leader'].includes(currentUserRole)) return;
             zoneCycleAdvanceRunning = true;
             let changed = false;
-            let staleZoneFound = false;
+            let needsRefresh = false;
             try {
                 for (const cell of CELLS_DATA) {
                     const zone = siegeZonesState[cell.key];
@@ -2591,12 +2945,7 @@ async function importZoneJson() {
                         console.warn('Не удалось автоматически сменить этап цикла для ' + cell.name, error);
                         continue;
                     }
-                    if (!data || data.length === 0) {
-                        // Другой офицер/клиент уже сменил этап. Без Realtime обновляем
-                        // локальный снимок один раз, чтобы не повторять этот запрос каждую минуту.
-                        staleZoneFound = true;
-                        continue;
-                    }
+                    if (!data || data.length === 0) { needsRefresh = true; continue; } // Другой клиент уже обновил клетку.
 
                     changed = true;
                     if (nextState === 'free') {
@@ -2607,8 +2956,8 @@ async function importZoneJson() {
                         if (resetError) console.error('Не удалось сбросить текущий урон для ' + cell.name, resetError);
                     }
                 }
-                if (changed || staleZoneFound) {
-                    await loadDataFromSupabase();
+                if (changed || needsRefresh) {
+                    await loadDataFromSupabase(['siege_zones', 'siege_damage']);
                     renderSiege();
                     if (selectedSiegeCellId) refreshZoneCard(selectedSiegeCellId);
                 }
