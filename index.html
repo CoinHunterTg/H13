@@ -41,7 +41,7 @@
             background-color: rgba(239, 68, 68, 0.95) !important;
             border-color: #ffffff !important;
             box-shadow: 0 0 14px rgba(239, 68, 68, 0.95), inset 0 0 6px rgba(255, 255, 255, 0.9) !important;
-            transform: translate(-50%, -50%) scale(1.15);
+            translate(-50%, -50%) scale(1.15);
             color: #fff !important;
             z-index: 5;
         }
@@ -3406,7 +3406,7 @@ if (resetDamageCellIds.length) {
                 const arms=document.createElementNS(svgNS,'path'); arms.setAttribute('class','h13-hunter-body'); arms.setAttribute('d','M -0.34,-0.42 L -0.55,-0.18 L -0.48,0.25 L -0.29,0.2 L -0.23,-0.08 L 0.22,-0.08 L 0.3,0.22 L 0.49,0.18 L 0.42,-0.2 L 0.2,-0.46 Z'); hunter.appendChild(arms);
                 const body=document.createElementNS(svgNS,'path'); body.setAttribute('class','h13-hunter-body'); body.setAttribute('d','M -0.32,-0.48 L 0.2,-0.48 L 0.34,0.22 L 0.12,0.48 L -0.25,0.43 L -0.43,0.05 Z'); hunter.appendChild(body);
                 const head=document.createElementNS(svgNS,'circle'); head.setAttribute('class','h13-hunter-glow'); head.setAttribute('cx','-0.03'); head.setAttribute('cy','-0.77'); head.setAttribute('r','0.31'); hunter.appendChild(head);
-                const motion=document.createElementNS(svgNS,'animateMotion'); motion.setAttribute('dur',`${Math.max(6,Math.min(10,6+routeD.length*.01))}s`); motion.setAttribute('begin',`${index*.82}s`); motion.setAttribute('repeatCount','indefinite'); motion.setAttribute('rotate','auto'); motion.setAttribute('path',routeD); hunter.appendChild(motion); svg.appendChild(hunter);
+                const motion=document.createElementNS(svgNS,'animateMotion'); motion.setAttribute('dur',`${Math.max(6,Math.min(10,6+routeD.length*.01))}s`); motion.setAttribute('begin',`${index*.82}s`); motion.setAttribute('repeatCount','indefinite'); motion.setAttribute('rotate','auto-reverse'); motion.setAttribute('path',routeD); hunter.appendChild(motion); svg.appendChild(hunter);
 
                 const wrapper=Array.from(layer.children).find(el=>el.dataset && el.dataset.h13CellKey===cell.key);
                 const marker=wrapper && wrapper.querySelector('.siege-marker'); if(marker) marker.classList.add('h13-network-land');
