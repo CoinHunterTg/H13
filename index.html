@@ -146,10 +146,18 @@
             animation: selectedPulse 1.5s infinite alternate;
         }
 
-        @keyframes selectedPulse {
-            0% { box-shadow: 0 0 10px #FACC15, inset 0 0 4px #FACC15; }
-            100% { box-shadow: 0 0 20px #FACC15, inset 0 0 12px #FACC15; }
-        }
+        @keyframes shelterPendingPulse {
+    0%, 100% {
+        box-shadow:
+            0 0 0 2px rgba(251,146,60,.55),
+            0 0 7px rgba(251,146,60,.4);
+    }
+    50% {
+        box-shadow:
+            0 0 0 6px rgba(251,146,60,.95),
+            0 0 18px rgba(251,146,60,.85);
+    }
+}
 
         .select-check-overlay {
             position: absolute;
@@ -232,7 +240,20 @@
         .h13-territory-card.h13-card-siege .h13-card-timer { color:#fff; }
         .h13-territory-card.h13-card-siege .h13-card-meta { color:#fff1f2; }
         .h13-mode-active .zone-cell-content, .h13-mode-active .map-cell-damage, .h13-mode-active .zone-priority-icon, .h13-mode-active .select-check-overlay { display:none !important; }
-        .h13-mode-active .siege-p1, .h13-mode-active .siege-p2, .h13-mode-active .siege-no-attack { background:transparent !important; border-color:transparent !important; box-shadow:none !important; }
+        .h13-mode-active .siege-p1 {
+    background: rgba(249, 115, 22, 0.28) !important;
+    border-color: rgba(249, 115, 22, 0.9) !important;
+}
+
+.h13-mode-active .siege-p2 {
+    background: rgba(6, 182, 212, 0.25) !important;
+    border-color: rgba(6, 182, 212, 0.85) !important;
+}
+
+.h13-mode-active .siege-no-attack {
+    background: rgba(239, 68, 68, 0.25) !important;
+    border-color: rgba(239, 68, 68, 0.85) !important;
+}
         .h13-mode-active [data-h13-cell-key] > div:not(.siege-marker) { display:none !important; }
         @keyframes h13NetworkSignal { 0% { stroke-dashoffset:0; opacity:.08; } 4% { opacity:1; } 28% { stroke-dashoffset:-100; opacity:.95; } 35%,100% { stroke-dashoffset:-100; opacity:0; } }
         @keyframes h13LandSignal { 0%,3%,100% { filter:brightness(1); } 5%,13% { filter:brightness(1.65) drop-shadow(0 0 1.8px rgba(196,181,253,.9)); } 18% { filter:brightness(1.08); } }
