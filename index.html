@@ -201,6 +201,54 @@
             white-space:nowrap;
             transform: translateY(-4.5px);
         }
+        .personal-cell-cross {
+    position: absolute;
+    inset: -3%;
+    z-index: 35;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    color: #ff2020 !important;
+    -webkit-text-fill-color: #ff2020 !important;
+    -webkit-text-stroke: 0 !important;
+    font-size: clamp(19px, 3.8vw, 31px);
+    font-weight: 1000;
+    line-height: 1;
+    text-shadow: 0 0 2px #000, 0 0 5px #ff2020, 0 0 9px rgba(255, 32, 32, 0.75);
+    transform: none;
+}
+
+#personal-mark-toggle {
+    position: absolute;
+    right: 7px;
+    bottom: 7px;
+    z-index: 52;
+    min-height: 38px;
+    padding: 0 10px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    background: rgba(69, 10, 10, 0.96) !important;
+    border: 1px solid rgba(248, 113, 113, 0.95) !important;
+    color: #fecaca !important;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.35);
+    font-size: 11px;
+    font-weight: 900;
+}
+
+#personal-mark-toggle.active {
+    background: rgba(185, 28, 28, 0.98) !important;
+    border-color: #f87171 !important;
+    color: #fff !important;
+    box-shadow: 0 0 0 2px rgba(248, 113, 113, 0.3), 0 0 12px rgba(239, 68, 68, 0.45);
+}
+
+#personal-mark-hint {
+    display: none !important;
+}
         .map-filter-section { border-bottom:1px solid rgba(71,85,105,.55); padding:10px 12px; }
         .map-filter-title { color:#67e8f9; font-size:10px; font-weight:900; letter-spacing:.12em; text-transform:uppercase; margin-bottom:8px; }
         .map-filter-option { display:flex; align-items:center; gap:8px; min-height:30px; font-size:12px; color:#e2e8f0; cursor:pointer; }
@@ -319,6 +367,70 @@
     pointer-events: none;
 }
 
+
+        /* Нижняя навигация H13 */
+        body { padding-bottom: calc(88px + env(safe-area-inset-bottom)) !important; }
+        #multi-select-bar { bottom: calc(76px + env(safe-area-inset-bottom)) !important; }
+        #h13-bottom-nav { position:fixed; left:0; right:0; bottom:0; z-index:45; display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:4px; padding:7px 7px calc(7px + env(safe-area-inset-bottom)); background:rgba(25,17,43,.97); border-top:1px solid rgba(167,139,250,.35); box-shadow:0 -8px 24px rgba(0,0,0,.28); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); }
+        .h13-nav-btn { min-width:0; min-height:55px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; border:1px solid transparent; border-radius:12px; color:#cbd5e1; background:transparent; font-size:10px; font-weight:800; line-height:1.1; }
+        .h13-nav-icon { font-size:23px; line-height:1.1; }
+        .h13-nav-btn.active { color:#fff; background:linear-gradient(160deg,rgba(109,40,217,.95),rgba(76,29,149,.88)); border-color:rgba(196,181,253,.85); box-shadow:0 0 12px rgba(139,92,246,.25); }
+        .h13-nav-btn[data-tab="siege"] { transform:translateY(-3px); min-height:59px; border-radius:15px; }
+        .h13-nav-btn[data-tab="siege"] .h13-nav-icon { font-size:27px; }
+        #tab-content-tactics { width:100%; max-width:900px; margin:0 auto; }
+/* Временно скрываем старое содержимое Тактики */
+#tab-content-tactics {
+    position: relative;
+    min-height: 220px;
+}
+
+#tab-content-tactics > * {
+    display: none !important;
+}
+
+#tab-content-tactics::before {
+    content: "🎯 Тактика H13\A\AРаздел в разработке\A\AЗдесь появится стратегическая информация клана.";
+    white-space: pre-line;
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    margin: 20px auto;
+    padding: 32px 16px;
+    border: 1px solid rgba(139, 92, 246, 0.45);
+    border-radius: 16px;
+    background: rgba(30, 27, 75, 0.65);
+    color: #e2e8f0;
+    text-align: center;
+    font-size: 14px;
+    line-height: 1.9;
+}
+        #tactics-map-container { position:relative; width:100%; max-width:490px; aspect-ratio:594/865; margin:0 auto; overflow:hidden; border-radius:12px; background:#0f172a; }
+        /* Общий масштаб карт: увеличивается единая поверхность со всеми полигонами и метками */
+        .map-zoom-viewport { position:relative; overflow:hidden; touch-action:none; isolation:isolate; }
+        /* Не форсируем GPU-слой: браузер может повторно сглаживать текст при изменении масштаба. */
+        .map-zoom-stage { position:absolute; inset:0; width:100%; height:100%; transform-origin:0 0; text-rendering:geometricPrecision; -webkit-font-smoothing:antialiased; }
+        .map-zoom-controls { position:absolute; left:7px; bottom:7px; z-index:50; display:flex; gap:4px; align-items:center; padding:4px; border:1px solid rgba(148,163,184,.45); border-radius:10px; background:rgba(2,6,23,.88); box-shadow:0 2px 10px rgba(0,0,0,.35); }
+        .map-zoom-controls button { width:31px; height:30px; border-radius:7px; border:1px solid rgba(100,116,139,.65); background:rgba(30,41,59,.95); color:#f8fafc; font-size:19px; font-weight:900; line-height:1; }
+        .map-zoom-controls button:active { background:#7c3aed; }
+        .map-zoom-level { min-width:38px; text-align:center; font:700 10px ui-monospace,monospace; color:#cbd5e1; }
+        .map-zoom-viewport.is-panning { cursor:grabbing; }
+        .map-zoom-viewport.is-panning .map-zoom-stage { pointer-events:none; }
+        #siege-map-container { overflow:hidden; }
+        #map-container { overflow:hidden; }
+        #tactics-map-container { width:100%; max-width:490px; margin:0 auto; }
+        .tactics-cell { position:absolute; transform:translate(-50%,-50%); width:var(--cell-size); height:var(--cell-size); clip-path:polygon(25% 0%,75% 0%,100% 50%,75% 100%,25% 100%,0% 50%); display:flex; align-items:center; justify-content:center; text-align:center; font-size:clamp(8px,2vw,12px); font-weight:900; color:white; text-shadow:0 1px 3px #000,0 0 4px #000; border:0; cursor:pointer; padding:0; line-height:1; }
+        .tactics-cell::before { content:''; position:absolute; inset:0; background:var(--clan-fill,rgba(148,163,184,.13)); box-shadow:inset 0 0 0 2px var(--clan-color,#94a3b8); clip-path:inherit; }
+        .tactics-cell > span { position:relative; z-index:1; }
+        .tactics-cell.clan-h13 { --clan-color:#ef4444; --clan-fill:rgba(185,28,28,.48); }
+        .tactics-cell.clan-ln { --clan-color:#eab308; --clan-fill:rgba(202,138,4,.45); }
+        .tactics-cell.clan-cm { --clan-color:#a16207; --clan-fill:rgba(120,53,15,.55); }
+        .tactics-cell.clan-multi { --clan-color:#f8fafc; --clan-fill:rgba(148,163,184,.45); }
+        .tactics-player-pin { position:absolute; transform:translate(-50%,-50%); z-index:4; max-width:42%; padding:2px 4px; border-radius:5px; font-size:9px; line-height:1.15; font-weight:900; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; border:1px solid currentColor; background:rgba(2,6,23,.9); text-shadow:0 1px 2px #000; }
+        .tactics-player-pin.h13 { color:#fca5a5; } .tactics-player-pin.ln { color:#fde047; } .tactics-player-pin.cm { color:#d6a77a; }
+        .tactics-filter { display:flex; align-items:center; gap:6px; font-size:11px; color:#e2e8f0; }
+        .tactics-filter input { accent-color:#a78bfa; width:15px; height:15px; }
+        @media (min-width:768px) { #h13-bottom-nav { left:50%; right:auto; width:min(620px,calc(100% - 32px)); transform:translateX(-50%); border:1px solid rgba(167,139,250,.35); border-bottom:0; border-radius:16px 16px 0 0; } }
+
     </style>
 </head>
 <body id="app-background" class="bg-slate-950 text-slate-100 min-h-screen font-sans p-2 md:p-3 pb-24">
@@ -357,7 +469,7 @@
                 <h1 class="text-base font-bold tracking-wide text-amber-500">🛡Консерва❤️</h1>
                 <div id="user-role-badge" class="text-xs px-2.5 py-1 rounded bg-slate-950 border border-slate-800 font-bold"></div>
                 
-                <div class="flex gap-2">
+                <div class="hidden">
                     <button id="tab-btn-siege" onclick="switchTab('siege')" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-600 text-white transition-colors">
                         ⚔ Осада
                     </button>
@@ -407,10 +519,17 @@
                     <button onclick="openZoneImportModal()" id="zone-import-open-btn" class="hidden px-2.5 py-1.5 rounded-lg border border-emerald-700 bg-emerald-950 text-emerald-300 text-[10px] font-bold">↻ Импорт данных JSON</button>
                     <span id="zone-sync-label" class="w-full text-center text-[9px] text-slate-200" style="-webkit-text-stroke:0.3px #000; text-shadow:0 1px 3px #000;">Данные земель ещё не загружены</span>
                 </div>
-                <div id="siege-map-container" class="relative w-full max-w-[480px] mt-1" style="aspect-ratio: 594 / 865;">
-                    <img src="map.png" class="absolute inset-0 w-full h-full object-contain rounded-lg shadow-2xl" alt="Карта" onerror="this.style.display='none'">
-                    <div id="siege-cells-layer" class="absolute inset-0"></div>
+                <div id="siege-map-container" class="map-zoom-viewport relative w-full max-w-[480px] mt-1" data-map-zoom="siege" style="aspect-ratio: 594 / 865;">
+                    <div id="siege-map-stage" class="map-zoom-stage">
+                        <img src="map.png" class="absolute inset-0 w-full h-full object-contain rounded-lg shadow-2xl" alt="Карта" onerror="this.style.display='none'">
+                        <div id="siege-cells-layer" class="absolute inset-0"></div>
+                    </div>
+                    <div class="map-zoom-controls" aria-label="Масштаб карты">
+                        <button type="button" onclick="changeMapZoom('siege',-0.1)" aria-label="Уменьшить">−</button><span id="siege-zoom-level" class="map-zoom-level">100%</span><button type="button" onclick="changeMapZoom('siege',0.1)" aria-label="Увеличить">+</button><button type="button" onclick="resetMapZoom('siege')" aria-label="Сбросить масштаб" title="Вписать карту">↺</button>
+                    </div>
                     <button id="map-layers-toggle" type="button" onclick="toggleMapLayersPanel(event)" aria-label="Открыть тактические слои" title="Тактические слои">☰</button>
+                    <div id="personal-mark-hint">Режим личных меток: нажмите на клетку, чтобы поставить или убрать ✕. Метки хранятся только в этом браузере и не сбрасываются автоматически.</div>
+                    <button id="personal-mark-toggle" type="button" onclick="togglePersonalMarkMode(event)" aria-pressed="false" title="Личные метки на карте">✕ <span>Метки</span></button>
                     <div id="map-layers-panel" class="hidden" aria-hidden="true">
                         <div id="map-layers-backdrop" onclick="closeMapLayersPanel()" aria-label="Закрыть меню"></div>
                         <div id="map-layers-drawer" onclick="event.stopPropagation()">
@@ -484,21 +603,6 @@
                 </div>
             </div>
 
-            <!-- 3. БЛОК АРСЕНАЛ -->
-            <div class="bg-slate-900/90 backdrop-blur p-2.5 rounded-xl border border-slate-800 flex flex-col min-h-[220px] max-h-[280px]">
-                <h2 class="text-xs font-semibold text-slate-200 mb-1.5 pb-1.5 border-b border-slate-800 flex items-center justify-between">
-                    <span>📦 Арсенал</span>
-                </h2>
-                <div id="arsenal-officer-search" class="hidden mb-1.5">
-                    <input id="arsenal-player-search" type="text" placeholder="🔎 Найти игрока..." autocomplete="off"
-                        oninput="arsenalSearchQuery = this.value.trim().toLowerCase(); renderArsenalList();"
-                        class="w-full bg-slate-950/80 border border-slate-700 focus:border-amber-500/70 outline-none rounded-lg px-2.5 py-1.5 text-xs text-slate-200 placeholder-slate-500">
-                </div>
-                <div id="arsenal-list" class="overflow-y-auto flex-1 space-y-1 text-xs pr-1">
-                    <div class="text-slate-500 text-center py-6 text-[11px]">Загрузка арсенала...</div>
-                </div>
-            </div>
-
             <!-- 5. ПОЛЕ ЗАМЕТКИ -->
             <div class="hidden">
                 <div class="flex items-center justify-between mb-1.5 pb-1.5 border-b border-slate-800">
@@ -555,12 +659,17 @@
                     <button onclick="clearViewingPlayer()" class="text-amber-400 hover:text-white text-[10px] underline font-medium">Сбросить</button>
                 </div>
 
-                <div id="map-container" class="relative w-full max-w-[490px]" style="aspect-ratio: 594 / 865;">
-                    <img id="map-img" src="map.png" class="absolute inset-0 w-full h-full object-contain rounded-lg shadow-2xl" alt="Карта" onerror="onMapError()">
-                    <div id="placeholder" class="absolute inset-0 flex flex-col items-center justify-center text-red-400 bg-slate-950/95 rounded-lg hidden p-4 text-center">
-                        <p class="font-semibold text-sm">Картинка map.png не найдена!</p>
+                <div id="map-container" class="map-zoom-viewport relative w-full max-w-[490px]" data-map-zoom="shelters" style="aspect-ratio: 594 / 865;">
+                    <div id="shelters-map-stage" class="map-zoom-stage">
+                        <img id="map-img" src="map.png" class="absolute inset-0 w-full h-full object-contain rounded-lg shadow-2xl" alt="Карта" onerror="onMapError()">
+                        <div id="placeholder" class="absolute inset-0 flex flex-col items-center justify-center text-red-400 bg-slate-950/95 rounded-lg hidden p-4 text-center">
+                            <p class="font-semibold text-sm">Картинка map.png не найдена!</p>
+                        </div>
+                        <div id="cells-layer" class="absolute inset-0"></div>
                     </div>
-                    <div id="cells-layer" class="absolute inset-0"></div>
+                    <div class="map-zoom-controls" aria-label="Масштаб карты">
+                        <button type="button" onclick="changeMapZoom('shelters',-0.1)" aria-label="Уменьшить">−</button><span id="shelters-zoom-level" class="map-zoom-level">100%</span><button type="button" onclick="changeMapZoom('shelters',0.1)" aria-label="Увеличить">+</button><button type="button" onclick="resetMapZoom('shelters')" aria-label="Сбросить масштаб" title="Вписать карту">↺</button>
+                    </div>
                 </div>
                 
                 <div class="mt-2.5 flex flex-wrap items-center justify-center gap-3">
@@ -574,6 +683,58 @@
                 </div>
                 <div id="shelter-count-edit-hint" class="mt-1 text-[10px] text-slate-500 text-center">Тап по клетке — отметить или снять владение</div>
             </div>
+        </div>
+
+        <!-- ВКЛАДКА: АРСЕНАЛ. Внутренний функционал и права сохранены -->
+        <div id="tab-content-arsenal" class="hidden max-w-4xl mx-auto w-full">
+            <!-- Существующий блок арсенала перенесён без изменения содержимого -->
+            <div id="arsenal-section" class="bg-slate-900/90 backdrop-blur p-3 rounded-xl border border-slate-800 flex flex-col min-h-[320px] max-h-[72vh]">
+                <h2 class="text-xs font-semibold text-slate-200 mb-1.5 pb-1.5 border-b border-slate-800 flex items-center justify-between">
+                    <span>📦 Арсенал</span>
+                </h2>
+                <div id="arsenal-officer-search" class="hidden mb-1.5">
+                    <input id="arsenal-player-search" type="text" placeholder="🔎 Найти игрока..." autocomplete="off"
+                        oninput="arsenalSearchQuery = this.value.trim().toLowerCase(); renderArsenalList();"
+                        class="w-full bg-slate-950/80 border border-slate-700 focus:border-amber-500/70 outline-none rounded-lg px-2.5 py-1.5 text-xs text-slate-200 placeholder-slate-500">
+                </div>
+                <div id="arsenal-list" class="overflow-y-auto flex-1 space-y-1 text-xs pr-1">
+                    <div class="text-slate-500 text-center py-6 text-[11px]">Загрузка арсенала...</div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ВКЛАДКА 3: ТАКТИКА КОНКУРЕНТОВ -->
+        <div id="tab-content-tactics" class="hidden flex-col gap-3">
+            <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3 space-y-3">
+                <div class="flex items-center justify-between gap-2">
+                    <div><div class="text-[10px] font-black tracking-[.18em] text-amber-300">H13 // INTELLIGENCE MAP</div><h2 class="text-base font-black text-white mt-1">Тактическая карта</h2><p class="text-[10px] text-slate-400 mt-1">Сравнение H13, Легиона (LN) и CoinMisha (CM)</p></div>
+                    <button type="button" onclick="openTacticsImport()" class="shrink-0 rounded-lg border border-violet-500/60 bg-violet-950/70 px-3 py-2 text-xs font-bold text-violet-200">⇧ Импорт JSON</button>
+                </div>
+                <div class="grid grid-cols-3 gap-2 text-[10px]">
+                    <label class="tactics-filter"><input type="checkbox" id="tactics-clan-h13" checked onchange="renderTacticsMap()"><span class="inline-block w-2.5 h-2.5 rounded-sm bg-red-500"></span> H13</label>
+                    <label class="tactics-filter"><input type="checkbox" id="tactics-clan-ln" checked onchange="renderTacticsMap()"><span class="inline-block w-2.5 h-2.5 rounded-sm bg-yellow-400"></span> LN · Легион</label>
+                    <label class="tactics-filter"><input type="checkbox" id="tactics-clan-cm" checked onchange="renderTacticsMap()"><span class="inline-block w-2.5 h-2.5 rounded-sm bg-amber-800"></span> CM · CoinMisha</label>
+                </div>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-x-3 gap-y-2 border-t border-slate-800 pt-2">
+                    <label class="tactics-filter"><input type="checkbox" id="tactics-show-lands" checked onchange="renderTacticsMap()">Земли кланов</label>
+                    <label class="tactics-filter"><input type="checkbox" id="tactics-show-players" checked onchange="renderTacticsMap()">Игроки на карте</label>
+                    <label class="tactics-filter"><input type="checkbox" id="tactics-show-timers" checked onchange="renderTacticsMap()">Таймеры</label>
+                    <label class="tactics-filter"><input type="checkbox" id="tactics-show-names" checked onchange="renderTacticsMap()">Имена игроков</label>
+                </div>
+                <div id="tactics-sync-status" class="text-[10px] text-slate-400">Данные конкурентов ещё не импортированы.</div>
+            </div>
+            <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-2">
+                <div id="tactics-map-container" class="map-zoom-viewport" data-map-zoom="tactics" style="aspect-ratio:594/865;">
+                    <div id="tactics-map-stage" class="map-zoom-stage"><img src="map.png" alt="Тактическая карта" class="absolute inset-0 w-full h-full object-contain" onerror="this.style.display='none'"><div id="tactics-cells-layer" class="absolute inset-0"></div><div id="tactics-players-layer" class="absolute inset-0 pointer-events-none"></div></div>
+                    <div class="map-zoom-controls" aria-label="Масштаб карты">
+                        <button type="button" onclick="changeMapZoom('tactics',-0.1)" aria-label="Уменьшить">−</button><span id="tactics-zoom-level" class="map-zoom-level">100%</span><button type="button" onclick="changeMapZoom('tactics',0.1)" aria-label="Увеличить">+</button><button type="button" onclick="resetMapZoom('tactics')" aria-label="Сбросить масштаб" title="Вписать карту">↺</button>
+                    </div>
+                </div>
+                <p class="text-[10px] text-slate-500 text-center mt-2">Нажми на клетку, чтобы посмотреть данные по ней. Состав и currentRegion доступны в карточках кланов. Метки на полигонах появятся только если currentRegion совпадает с названием/кодом клетки; владение показывается только при наличии отдельного списка земель в JSON.</p>
+            </div>
+            <div id="tactics-clan-cards" class="grid grid-cols-1 sm:grid-cols-3 gap-2"></div>
+            <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3"><h3 class="text-xs font-bold text-violet-300 mb-2">Последний импорт</h3><div id="tactics-import-summary" class="text-xs text-slate-400">Вставь JSON страницы клана через кнопку «Импорт JSON».</div></div>
         </div>
     </div>
 
@@ -901,24 +1062,130 @@
             reader.readAsDataURL(file);
         }
 
-        function switchTab(tabName) {
-            const sheltersTab = document.getElementById('tab-content-shelters');
-            const siegeTab = document.getElementById('tab-content-siege');
-            const btnShelters = document.getElementById('tab-btn-shelters');
-            const btnSiege = document.getElementById('tab-btn-siege');
+        // Масштабирование каждой карты независимо. Сохраняется только в браузере игрока.
+        const MAP_ZOOM_CONFIG = {
+            siege: { viewport: 'siege-map-container', stage: 'siege-map-stage', label: 'siege-zoom-level' },
+            shelters: { viewport: 'map-container', stage: 'shelters-map-stage', label: 'shelters-zoom-level' },
+            tactics: { viewport: 'tactics-map-container', stage: 'tactics-map-stage', label: 'tactics-zoom-level' }
+        };
+        const mapZoomState = {};
+        function mapZoomLoad(key) {
+            if (mapZoomState[key]) return mapZoomState[key];
+            let saved = null;
+            try { saved = JSON.parse(localStorage.getItem('h13_map_zoom_v1_' + key) || 'null'); } catch (_) {}
+            mapZoomState[key] = { scale: Math.max(1, Math.min(1.4, Number(saved?.scale) || 1)), x: Number(saved?.x) || 0, y: Number(saved?.y) || 0, dragging: false, moved: false };
+            return mapZoomState[key];
+        }
+        function mapZoomClamp(key) {
+            const cfg = MAP_ZOOM_CONFIG[key], view = document.getElementById(cfg.viewport), st = mapZoomLoad(key);
+            if (!view) return;
+            const w = view.clientWidth, h = view.clientHeight;
+            if (w <= 0 || h <= 0) return;
+            st.x = Math.max(-w * (st.scale - 1), Math.min(0, st.x));
+            st.y = Math.max(-h * (st.scale - 1), Math.min(0, st.y));
+        }
+        function applyMapZoom(key, persist = true) {
+            const cfg = MAP_ZOOM_CONFIG[key], view = document.getElementById(cfg.viewport), stage = document.getElementById(cfg.stage), label = document.getElementById(cfg.label);
+            if (!view || !stage) return;
+            const st = mapZoomLoad(key); mapZoomClamp(key);
+            stage.style.transform = `translate(${st.x}px, ${st.y}px) scale(${st.scale})`;
+            if (label) label.textContent = Math.round(st.scale * 100) + '%';
+            view.classList.toggle('is-zoomed', st.scale > 1.001);
+            if (persist) { try { localStorage.setItem('h13_map_zoom_v1_' + key, JSON.stringify({scale:st.scale,x:st.x,y:st.y})); } catch (_) {} }
+        }
+        function changeMapZoom(key, delta) {
+            const st = mapZoomLoad(key); const next = Math.max(1, Math.min(1.4, Math.round((st.scale + delta) * 10) / 10));
+            if (next === st.scale) return;
+            const cfg = MAP_ZOOM_CONFIG[key], view = document.getElementById(cfg.viewport);
+            if (view) { const cx=view.clientWidth/2, cy=view.clientHeight/2, ratio=next/st.scale; st.x=cx-(cx-st.x)*ratio; st.y=cy-(cy-st.y)*ratio; }
+            st.scale = next; if (next === 1) { st.x=0; st.y=0; }
+            applyMapZoom(key);
+        }
+        function resetMapZoom(key) { const st=mapZoomLoad(key); st.scale=1; st.x=0; st.y=0; applyMapZoom(key); }
+        function initMapZoom() {
+            Object.keys(MAP_ZOOM_CONFIG).forEach(key => {
+                const cfg=MAP_ZOOM_CONFIG[key], view=document.getElementById(cfg.viewport);
+                if (!view || view.dataset.zoomReady === '1') { applyMapZoom(key, false); return; }
+                view.dataset.zoomReady='1';
+                const st=mapZoomLoad(key);
+                st.scale=Math.min(1.4, Math.max(1, st.scale));
+                st.pointers = new Map(); st.pinch = null;
+                applyMapZoom(key, false);
+                const distance = (a,b) => Math.hypot(a.x-b.x,a.y-b.y);
+                const midpoint = (a,b) => ({x:(a.x+b.x)/2,y:(a.y+b.y)/2});
+                view.addEventListener('pointerdown', e => {
+                    if (e.target.closest('.map-zoom-controls, #map-layers-toggle, #map-layers-panel')) return;
+                    st.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+                    if (st.pointers.size >= 2) {
+                        const pts=Array.from(st.pointers.values()).slice(0,2), mid=midpoint(pts[0],pts[1]);
+                        st.dragging=false; st.moved=true;
+                        st.pinch={distance:Math.max(1,distance(pts[0],pts[1])),scale:st.scale,anchorX:(mid.x-view.getBoundingClientRect().left-st.x)/st.scale,anchorY:(mid.y-view.getBoundingClientRect().top-st.y)/st.scale};
+                        view.classList.remove('is-panning');
+                        try { view.setPointerCapture(e.pointerId); } catch (_) {}
+                        e.preventDefault();
+                        return;
+                    }
+                    st.dragging=st.scale>1.001; st.moved=false;
+                    st.startX=e.clientX; st.startY=e.clientY; st.baseX=st.x; st.baseY=st.y;
+                });
+                view.addEventListener('pointermove', e => {
+                    if (st.pointers.has(e.pointerId)) st.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+                    if (st.pinch && st.pointers.size >= 2) {
+                        const pts=Array.from(st.pointers.values()).slice(0,2), mid=midpoint(pts[0],pts[1]);
+                        const next=Math.max(1,Math.min(1.4,st.pinch.scale*distance(pts[0],pts[1])/st.pinch.distance));
+                        const rect=view.getBoundingClientRect(); st.scale=next;
+                        st.x=mid.x-rect.left-st.pinch.anchorX*next; st.y=mid.y-rect.top-st.pinch.anchorY*next;
+                        applyMapZoom(key,false); e.preventDefault(); return;
+                    }
+                    if (!st.dragging || st.pointers.size>1) return;
+                    const dx=e.clientX-st.startX, dy=e.clientY-st.startY;
+                    if (!st.moved && Math.abs(dx)+Math.abs(dy)>5) {
+                        st.moved=true; view.classList.add('is-panning');
+                        try { view.setPointerCapture(e.pointerId); } catch (_) {}
+                    }
+                    if (!st.moved) return;
+                    st.x=st.baseX+dx; st.y=st.baseY+dy; applyMapZoom(key,false);
+                });
+                const endPointer = e => {
+                    const wasPinching=!!st.pinch;
+                    st.pointers.delete(e.pointerId);
+                    if (st.pinch) {
+                        st.pinch=null; st.dragging=false; st.moved=true;
+                        applyMapZoom(key,true);
+                        view.dataset.suppressClick='1'; setTimeout(()=>{delete view.dataset.suppressClick;},180);
+                    } else if (st.dragging) {
+                        st.dragging=false; view.classList.remove('is-panning');
+                        if(st.moved){ applyMapZoom(key,true); view.dataset.suppressClick='1'; setTimeout(()=>{delete view.dataset.suppressClick;},180); }
+                    }
+                    if (wasPinching && st.pointers.size===1) { st.pointers.clear(); }
+                };
+                view.addEventListener('pointerup', endPointer); view.addEventListener('pointercancel', endPointer);
+                view.addEventListener('click', e=>{ if(view.dataset.suppressClick==='1'){ e.preventDefault(); e.stopPropagation(); delete view.dataset.suppressClick; } }, true);
+                view.addEventListener('wheel', e=>{ if(!e.ctrlKey && !e.metaKey) return; e.preventDefault(); changeMapZoom(key, e.deltaY<0?.1:-.1); }, {passive:false});
+            });
+        }
+        window.addEventListener('resize', () => Object.keys(MAP_ZOOM_CONFIG).forEach(k=>applyMapZoom(k, false)));
 
-            if (tabName === 'shelters') {
-                sheltersTab.classList.remove('hidden');
-                siegeTab.classList.add('hidden');
-                btnShelters.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-600 text-white transition-colors';
-                btnSiege.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800 transition-colors';
-                renderCells();
-            } else {
-                sheltersTab.classList.add('hidden');
-                siegeTab.classList.remove('hidden');
-                btnSiege.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-600 text-white transition-colors';
-                btnShelters.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800 transition-colors';
-                renderSiege();
+        function switchTab(tabName) {
+            const tabs = {
+                siege: document.getElementById('tab-content-siege'),
+                shelters: document.getElementById('tab-content-shelters'),
+                arsenal: document.getElementById('tab-content-arsenal'),
+                tactics: document.getElementById('tab-content-tactics')
+            };
+            Object.entries(tabs).forEach(([name, el]) => {
+                if (!el) return;
+                el.classList.toggle('hidden', name !== tabName);
+                if (name === 'tactics') el.classList.toggle('flex', name === tabName);
+            });
+            document.querySelectorAll('#h13-bottom-nav .h13-nav-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tabName));
+            if (tabName === 'shelters') { renderCells(); applyMapZoom('shelters', false); }
+            else if (tabName === 'siege') { renderSiege(); applyMapZoom('siege', false); }
+            else if (tabName === 'tactics') { renderTacticsMap(); applyMapZoom('tactics', false); }
+            else if (tabName === 'arsenal') { renderArsenalList(); }
+            else if (tabName === 'stats') {
+                alert('Раздел «Статистика клана» запланирован на следующий этап. Сейчас завершаем перенос существующих разделов и тестирование Тактики.');
+                switchTab('siege');
             }
         }
 
@@ -1053,6 +1320,8 @@
                 const isValid = await verifySavedSession();
                 if (isValid) {
                     await loadDataFromSupabase();
+                    loadPersonalCellMarks();
+                    await loadPersonalMapFilters();
                     document.getElementById('auth-screen').classList.add('hidden');
                     document.getElementById('select-profile-screen').classList.add('hidden');
                     document.getElementById('main-app').classList.remove('hidden');
@@ -1152,6 +1421,8 @@
             currentPlayer = select.value;
             localStorage.setItem('proto_player_name', currentPlayer);
             await loadDataFromSupabase();
+            loadPersonalCellMarks();
+            await loadPersonalMapFilters();
             document.getElementById('select-profile-screen').classList.add('hidden');
             document.getElementById('main-app').classList.remove('hidden');
             setupRoleUI();
@@ -1167,7 +1438,7 @@
             localStorage.removeItem('proto_auth_role');
             localStorage.removeItem('proto_player_name');
             localStorage.removeItem('proto_active_pin');
-            currentUserRole = ''; currentPlayer = ''; viewingPlayer = '';
+            currentUserRole = ''; currentPlayer = ''; viewingPlayer = ''; personalMarkMode = false; personalCellMarks = new Set();
             document.getElementById('main-app').classList.add('hidden');
             document.getElementById('auth-screen').classList.remove('hidden');
             document.getElementById('pin-input').value = '';
@@ -2274,6 +2545,86 @@
             if (totalPreviewEl) totalPreviewEl.textContent = formatDamage(totalDraft);
         }
 
+async function deductArsenalForAttack(player, diffs) {
+    const required = {
+        dynamite: Math.max(0, Math.round(
+            (diffs.find(d => d.type === 'dynamite')?.delta || 0) / 2000000000
+        )),
+        bomb: Math.max(0, Math.round(
+            (diffs.find(d => d.type === 'bomb')?.delta || 0) / 200000000
+        ))
+    };
+
+    if (required.dynamite === 0 && required.bomb === 0) {
+        return '';
+    }
+
+    if (!supabaseClient) {
+        return '⚠ Арсенал не подключён к базе. Урон зарегистрирован, списание не сохранено.';
+    }
+
+    const { data: row, error: readError } = await supabaseClient
+        .from('arsenal')
+        .select('id, dynamite, bomb')
+        .eq('player_name', player)
+        .maybeSingle();
+
+    if (readError) {
+        console.error('Ошибка чтения арсенала перед списанием:', readError);
+        return '⚠ Не удалось проверить арсенал. Атака зарегистрирована, ресурсы не списаны.';
+    }
+
+    if (!row) {
+        return 'ℹ Атака зарегистрирована. Арсенал не заполнен — ресурсы не списаны.';
+    }
+
+    const available = {
+        dynamite: Math.max(0, Number(row.dynamite) || 0),
+        bomb: Math.max(0, Number(row.bomb) || 0)
+    };
+
+    const spent = {
+        dynamite: Math.min(required.dynamite, available.dynamite),
+        bomb: Math.min(required.bomb, available.bomb)
+    };
+
+    const missingDyn = required.dynamite - spent.dynamite;
+    const missingBomb = required.bomb - spent.bomb;
+
+    if (spent.dynamite === 0 && spent.bomb === 0) {
+        return 'ℹ Атака зарегистрирована. В арсенале недостаточно ресурсов для списания.';
+    }
+
+    const updated = {
+        dynamite: available.dynamite - spent.dynamite,
+        bomb: available.bomb - spent.bomb,
+        updated_at: new Date().toISOString()
+    };
+
+    const { error: updateError } = await supabaseClient
+        .from('arsenal')
+        .update(updated)
+        .eq('id', row.id);
+
+    if (updateError) {
+        console.error('Ошибка списания ресурсов:', updateError);
+        return '⚠ Атака зарегистрирована, но списание ресурсов не удалось сохранить.';
+    }
+
+    arsenalState[player] = {
+        dynamite: updated.dynamite,
+        bomb: updated.bomb
+    };
+
+    renderArsenalList();
+
+    if (missingDyn > 0 || missingBomb > 0) {
+        return `⚠ Атака зарегистрирована. Списано: 🧨 ${spent.dynamite}, 💣 ${spent.bomb}. Не хватило: 🧨 ${missingDyn}, 💣 ${missingBomb}.`;
+    }
+
+    return `📦 Списано из арсенала: 🧨 ${spent.dynamite}, 💣 ${spent.bomb}.`;
+}
+
 // ИСПРАВЛЕННАЯ ФУНКЦИЯ ПОДТВЕРЖДЕНИЯ АТАКИ (с записью дельты в историю)
         async function commitMyDamage() {
             if (!selectedSiegeCellId || !currentPlayer) return;
@@ -2362,11 +2713,14 @@
                 }
             }
 
+            const arsenalNotice = await deductArsenalForAttack(currentPlayer, diffs);
+
             // Перезагружаем только текущий урон и последние записи журнала.
             await loadDataFromSupabase(['siege_damage', 'siege_damage_history']);
             renderDamageRegistrations();
 
-            alert('✅ Успешно зафиксировано!');
+            alert('✅ Атака зарегистрирована!' + (arsenalNotice ? '\n\n' + arsenalNotice : ''));
+
             openCellCardModal(cellId);
         }
 
@@ -3058,7 +3412,79 @@ if (resetDamageCellIds.length) {
 
         const defaultMapFilters = Object.freeze({ layers: { players: true, priority: true, status: true, timers: true, missions: true, damage: true, shelterProgress: true }, priorities: { 0: true, 1: true, 2: true, 3: true }, zones: { free: true, siege: true, owned: true, unknown: true } });
         let mapFilters = JSON.parse(JSON.stringify(defaultMapFilters));
-
+        let mapFiltersSaveTimer = null;
+        let mapFiltersLoadedForPlayer = '';
+        let personalMarkMode = false;
+        let personalCellMarks = new Set();
+        let personalMarksLoadedForPlayer = '';
+        function playerStorageKey(prefix, player = currentPlayer) { return prefix + encodeURIComponent(String(player || 'anonymous').trim().toLowerCase()); }
+        function loadPersonalCellMarks() {
+            personalMarksLoadedForPlayer = currentPlayer || '';
+            try {
+                const saved = JSON.parse(localStorage.getItem(playerStorageKey('h13_personal_cell_marks_v1_', currentPlayer)) || '[]');
+                personalCellMarks = new Set(Array.isArray(saved) ? saved.map(String) : []);
+            } catch (_) { personalCellMarks = new Set(); }
+        }
+        function savePersonalCellMarks() {
+            try { localStorage.setItem(playerStorageKey('h13_personal_cell_marks_v1_', currentPlayer), JSON.stringify([...personalCellMarks])); }
+            catch (e) { console.warn('Не удалось сохранить личные метки в этом браузере:', e); }
+        }
+        function togglePersonalMarkMode(event) {
+            if (event) event.stopPropagation();
+            personalMarkMode = !personalMarkMode;
+            const btn = document.getElementById('personal-mark-toggle');
+            const hint = document.getElementById('personal-mark-hint');
+            if (btn) { btn.classList.toggle('active', personalMarkMode); btn.setAttribute('aria-pressed', personalMarkMode ? 'true' : 'false'); btn.innerHTML = personalMarkMode ? '✕ <span>Метки: ВКЛ</span>' : '✕ <span>Метки</span>'; }
+            if (hint) hint.style.display = personalMarkMode ? 'block' : 'none';
+        }
+        function togglePersonalCellMark(cell) {
+            const key = String(cell.key || cell.id);
+            if (personalCellMarks.has(key)) personalCellMarks.delete(key); else personalCellMarks.add(key);
+            savePersonalCellMarks();
+            renderSiege();
+        }
+        async function loadPersonalMapFilters() {
+            const player = String(currentPlayer || '').trim();
+            if (!player) return;
+            mapFiltersLoadedForPlayer = player;
+            let loaded = null;
+            if (supabaseClient) {
+                try {
+                    const { data, error } = await supabaseClient.from('player_map_settings').select('settings').eq('player_name', player).maybeSingle();
+                    if (error) throw error;
+                    if (data && data.settings && typeof data.settings === 'object') loaded = data.settings;
+                } catch (e) { console.warn('Не удалось загрузить персональные фильтры (проверьте таблицу player_map_settings):', e.message || e); }
+            }
+            // Локальная копия нужна как быстрый старт, а при доступности БД её значение обновляется из Supabase.
+            if (!loaded) {
+                try { loaded = JSON.parse(localStorage.getItem(playerStorageKey('h13_map_filters_v1_', player)) || 'null'); } catch (_) {}
+            }
+            mapFilters = JSON.parse(JSON.stringify(defaultMapFilters));
+            if (loaded && typeof loaded === 'object') {
+                ['layers','priorities','zones'].forEach(group => {
+                    if (loaded[group] && typeof loaded[group] === 'object') Object.keys(mapFilters[group]).forEach(k => { if (typeof loaded[group][k] === 'boolean') mapFilters[group][k] = loaded[group][k]; });
+                });
+            }
+            try { localStorage.setItem(playerStorageKey('h13_map_filters_v1_', player), JSON.stringify(mapFilters)); } catch (_) {}
+            syncMapFilterControls();
+            renderSiege();
+        }
+        async function persistPersonalMapFilters() {
+            const player = String(currentPlayer || '').trim();
+            if (!player) return;
+            const snapshot = JSON.parse(JSON.stringify(mapFilters));
+            try { localStorage.setItem(playerStorageKey('h13_map_filters_v1_', player), JSON.stringify(snapshot)); } catch (_) {}
+            if (!supabaseClient) return;
+            const { error } = await supabaseClient.from('player_map_settings').upsert({ player_name: player, settings: snapshot, updated_at: new Date().toISOString() }, { onConflict: 'player_name' });
+            if (error) {
+                console.warn('Не удалось сохранить персональные фильтры в Supabase:', error.message || error);
+                if (!window.__h13FilterSaveErrorShown) { window.__h13FilterSaveErrorShown = true; alert('Фильтры применены и сохранены на этом устройстве, но не удалось записать их в Supabase. Проверьте, что создана таблица player_map_settings и добавлены политики доступа.'); }
+            }
+        }
+        function scheduleMapFiltersSave() {
+            if (mapFiltersSaveTimer) clearTimeout(mapFiltersSaveTimer);
+            mapFiltersSaveTimer = setTimeout(() => { mapFiltersSaveTimer = null; persistPersonalMapFilters(); }, 250);
+        }
         function toggleMapLayersPanel(event) {
             if (event) event.stopPropagation();
             const panel = document.getElementById('map-layers-panel');
@@ -3079,6 +3505,7 @@ if (resetDamageCellIds.length) {
         function updateMapFilters() {
             readMapFiltersFromControls();
             renderSiege();
+            scheduleMapFiltersSave();
         }
         function syncMapFilterControls() {
             document.querySelectorAll('[data-map-layer]').forEach(el => { el.checked = !!mapFilters.layers[el.dataset.mapLayer]; });
@@ -3089,11 +3516,13 @@ if (resetDamageCellIds.length) {
             Object.keys(mapFilters.layers).forEach(key => mapFilters.layers[key] = enabled);
             syncMapFilterControls();
             renderSiege();
+            scheduleMapFiltersSave();
         }
         function resetMapFilters() {
             mapFilters = JSON.parse(JSON.stringify(defaultMapFilters));
             syncMapFilterControls();
             renderSiege();
+            scheduleMapFiltersSave();
         }
         function mapCellPassesFilters(cell, priority, zone) {
             if (!mapFilters.priorities[String(priority)] ) return false;
@@ -3231,8 +3660,20 @@ if (resetDamageCellIds.length) {
                 // Тактические фильтры скрывают только метки карты; состояние и данные клетки не меняются.
                 if (!mapCellPassesFilters(cell, status, zone)) wrapper.style.display = 'none';
 
+                if (personalCellMarks.has(String(cell.key || cell.id))) {
+                    const cross = document.createElement('div');
+                    cross.className = 'personal-cell-cross';
+                    cross.textContent = '✕';
+                    cross.setAttribute('aria-label', 'Личная метка');
+                    wrapper.appendChild(cross);
+                }
+
                 marker.onclick = (e) => {
                     e.stopPropagation();
+                    if (personalMarkMode) {
+                        togglePersonalCellMark(cell);
+                        return;
+                    }
                     if (isSelectMode) {
                         toggleCellSelection(cell.id);
                     } else {
@@ -3458,12 +3899,197 @@ if (resetDamageCellIds.length) {
             addPortal({x:hqTarget.x,y:hqTarget.y,size:9.5}, '0s', true);
         }
 
-        window.addEventListener('DOMContentLoaded', () => { syncMapFilterControls(); checkAuthOnLoad(); });
+
+        // --- ТАКТИКА: импорт снимков JSON страниц кланов ---
+        const TACTICS_STORAGE_KEY = 'h13_tactics_clans_v1';
+        const TACTICS_CLANS = {
+            h13: { tag:'H13', name:'H13', color:'#ef4444', icon:'🐺' },
+            ln: { tag:'LN', name:'Легион', color:'#eab308', icon:'🪙' },
+            cm: { tag:'CM', name:'CoinMisha', color:'#a16207', icon:'🐻' }
+        };
+        let tacticsClans = {};
+        try { tacticsClans = JSON.parse(localStorage.getItem(TACTICS_STORAGE_KEY) || '{}') || {}; } catch (_) { tacticsClans = {}; }
+        let tacticsStorageMode = 'local';
+        function tacticsSaveLocal() { try { localStorage.setItem(TACTICS_STORAGE_KEY, JSON.stringify(tacticsClans)); } catch(e) { console.warn('Не удалось сохранить тактические данные локально', e); } }
+        async function tacticsSaveSnapshot(clanKey, snapshot) {
+            tacticsClans[clanKey] = snapshot;
+            tacticsSaveLocal();
+            if (supabaseClient) {
+                try {
+                    const { error } = await supabaseClient.from('tactics_clan_snapshots').upsert({ clan_tag: clanKey, payload: snapshot, imported_at: snapshot.importedAt }, { onConflict: 'clan_tag' });
+                    if (!error) { tacticsStorageMode = 'shared'; return 'shared'; }
+                    console.warn('Тактика: Supabase не сохранил снимок, оставлена локальная копия:', error.message);
+                } catch (e) { console.warn('Тактика: не удалось сохранить в Supabase:', e); }
+            }
+            tacticsStorageMode = 'local';
+            return 'local';
+        }
+        async function loadTacticsSnapshots() {
+            if (!supabaseClient) { renderTacticsMap(); return; }
+            try {
+                const { data, error } = await supabaseClient.from('tactics_clan_snapshots').select('clan_tag,payload,imported_at');
+                if (error) throw error;
+                for (const row of (data || [])) if (['h13','ln','cm'].includes(row.clan_tag) && row.payload) tacticsClans[row.clan_tag] = row.payload;
+                tacticsStorageMode = 'shared';
+                tacticsSaveLocal();
+            } catch (e) {
+                tacticsStorageMode = 'local';
+                console.info('Таблица tactics_clan_snapshots пока недоступна; используется локальное хранение.', e.message || e);
+            }
+            renderTacticsMap();
+        }
+        function openTacticsImport() { const m=document.getElementById('tactics-import-modal'); m.classList.remove('hidden'); m.classList.add('flex'); document.getElementById('tactics-import-message').textContent='Выбери тег клана, вставь JSON и нажми «Проверить и сохранить».'; }
+        function closeTacticsImport() { const m=document.getElementById('tactics-import-modal'); m.classList.add('hidden'); m.classList.remove('flex'); }
+        async function pasteTacticsClipboard() {
+            const box=document.getElementById('tactics-import-json');
+            try { if (!navigator.clipboard || !navigator.clipboard.readText) throw new Error('Буфер недоступен'); box.value=await navigator.clipboard.readText(); document.getElementById('tactics-import-message').textContent='Буфер вставлен. Проверь JSON перед сохранением.'; }
+            catch(e) { box.focus(); document.getElementById('tactics-import-message').textContent='Автовставка недоступна в этом окне. Нажми в поле JSON и вставь вручную: Ctrl+V.'; }
+        }
+        function tacticsFindResult(obj) {
+            if (!obj || typeof obj !== 'object') return null;
+            if (obj.result && typeof obj.result === 'object') return obj.result;
+            if (obj.data && obj.data.result && typeof obj.data.result === 'object') return obj.data.result;
+            if (obj.data && typeof obj.data === 'object' && (obj.data.members || obj.data.name)) return obj.data;
+            if (obj.members || obj.name || obj.landCap !== undefined) return obj;
+            return null;
+        }
+        function tacticsExtractMembers(result) {
+            const raw = Array.isArray(result.members) ? result.members : (Array.isArray(result.members?.items) ? result.members.items : []);
+            return raw.map(m => {
+                const user = m?.user && typeof m.user === 'object' ? m.user : {};
+                const name = m?.name ?? user?.name ?? user?.nickname ?? m?.nickname ?? 'Без имени';
+                return {
+                    name: String(name), rank: m?.rank ?? user?.rank ?? '',
+                    currentRegion: m?.currentRegion ?? user?.currentRegion ?? '',
+                    lastLoginAt: m?.lastLoginAt ?? user?.lastLoginAt ?? null,
+                    level: Number(m?.level ?? user?.level ?? 0) || 0,
+                    power: Number(m?.power ?? user?.power ?? 0) || 0,
+                    weeklyPoints: Number(m?.weeklyPoints ?? user?.weeklyPoints ?? 0) || 0,
+                    lifetimePoints: Number(m?.lifetimePoints ?? user?.lifetimePoints ?? 0) || 0
+                };
+            }).filter(m => m.name);
+        }
+        function tacticsExtractHeldRegions(result) {
+            const keys=['lands','regions','territories','ownedRegions','heldRegions','ownedLands','territoryList','cells'];
+            for (const key of keys) {
+                const arr=result?.[key];
+                if (!Array.isArray(arr)) continue;
+                return arr.map(v => typeof v==='string' ? v : (v?.name ?? v?.regionName ?? v?.currentRegion ?? v?.code ?? v?.key ?? '')).filter(Boolean).map(String);
+            }
+            return [];
+        }
+        async function importTacticsClanJson() {
+            const msg=document.getElementById('tactics-import-message');
+            const clanKey=document.getElementById('tactics-import-clan').value;
+            let parsed, result;
+            try { parsed=JSON.parse(document.getElementById('tactics-import-json').value); result=tacticsFindResult(parsed); if (!result) throw new Error('Не найден объект result с данными клана.'); }
+            catch(e) { msg.className='text-xs text-red-400'; msg.textContent='Ошибка JSON: '+e.message; return; }
+            const members=tacticsExtractMembers(result);
+            if (!members.length && !result.name) { msg.className='text-xs text-red-400'; msg.textContent='Не найдены название клана и список участников. Ничего не сохранено.'; return; }
+            const def=TACTICS_CLANS[clanKey];
+            const snapshot={
+                tag:def.tag, configuredName:def.name, name:String(result.name || def.name),
+                landCap:Number(result.landCap ?? 0)||0, membersCount:Number(result.membersCount ?? members.length)||members.length,
+                members, heldRegions:tacticsExtractHeldRegions(result),
+                reputation:Number(result.reputation ?? 0)||0, storageHunt:Number(result.storageHunt ?? 0)||0,
+                treasuryCoins:Number(result.treasuryCoins ?? 0)||0, xp:Number(result.xp ?? 0)||0,
+                xpNext:Number(result.xpNext ?? 0)||0, importedAt:new Date().toISOString()
+            };
+            // Состав полностью заменяется каждым свежим снимком; внутренний номер игрока не считается постоянным ID.
+            const storageMode = await tacticsSaveSnapshot(clanKey, snapshot); renderTacticsMap();
+            msg.className='text-xs text-emerald-300'; msg.textContent=`Сохранено: ${snapshot.name} · участников в JSON: ${members.length} · лимит земель: ${snapshot.landCap || '—'}. ` + (storageMode === 'shared' ? 'Данные доступны с других устройств.' : 'Пока сохранено только в этом браузере: подключи таблицу Supabase по инструкции.');
+            document.getElementById('tactics-import-summary').textContent=`${snapshot.name} (${snapshot.tag}): обновлено ${new Date(snapshot.importedAt).toLocaleString('ru-RU')}; состав ${members.length}; земли в данных: ${snapshot.heldRegions.length || 'отдельный список не найден'}.`;
+        }
+        function tacticsRegionCell(region) {
+            const text=String(region ?? '').trim().toLowerCase(); if (!text) return null;
+            return CELLS_DATA.find(c => [c.key,c.name].some(v=>String(v).toLowerCase()===text) || text.includes(c.name.toLowerCase()) || text===c.key.toLowerCase()) || null;
+        }
+        function tacticsEnabled(key) { const el=document.getElementById(key); return !el || el.checked; }
+        function renderTacticsMap() {
+            const layer=document.getElementById('tactics-cells-layer'); if (!layer) return;
+            layer.innerHTML=''; const pins=document.getElementById('tactics-players-layer'); pins.innerHTML='';
+            const enabled={h13:tacticsEnabled('tactics-clan-h13'),ln:tacticsEnabled('tactics-clan-ln'),cm:tacticsEnabled('tactics-clan-cm')};
+            const showLands=tacticsEnabled('tactics-show-lands'), showPlayers=tacticsEnabled('tactics-show-players'), showTimers=tacticsEnabled('tactics-show-timers'), showNames=tacticsEnabled('tactics-show-names');
+            const regionOwners={};
+            // Земли H13 берём из уже импортированных данных осады; конкурентов — только из их JSON, если он содержит список земель.
+            if (enabled.h13) CELLS_DATA.forEach(cell => { const z=siegeZonesState[cell.key]; if (z && z.state==='owned' && !(regionOwners[cell.key]||[]).includes('h13')) (regionOwners[cell.key] ||= []).push('h13'); });
+            for (const k of ['ln','cm']) {
+                if (!enabled[k]) continue;
+                const snap=tacticsClans[k]; if (!snap) continue;
+                for (const region of snap.heldRegions || []) { const cell=tacticsRegionCell(region); if (cell) (regionOwners[cell.key] ||= []).push(k); }
+            }
+            CELLS_DATA.forEach(cell=>{
+                const owners=regionOwners[cell.key] || [];
+                const btn=document.createElement('button'); btn.type='button'; btn.className='tactics-cell'; btn.style.left=cell.x+'%'; btn.style.top=cell.y+'%'; btn.style.setProperty('--cell-size',cell.size+'%');
+                if (owners.length===1) btn.classList.add('clan-'+owners[0]); else if (owners.length>1) btn.classList.add('clan-multi');
+                else { btn.style.setProperty('--clan-color','rgba(148,163,184,.35)'); btn.style.setProperty('--clan-fill','rgba(148,163,184,.08)'); }
+                const ownerText=owners.map(k=>TACTICS_CLANS[k].tag).join('/');
+                const memberHere=[];
+                if (enabled.h13) (iamHereState[cell.id] || []).forEach(name => memberHere.push({k:'h13',m:{name,currentRegion:cell.name,level:0,power:0,weeklyPoints:0,lifetimePoints:0,rank:'',lastLoginAt:null}}));
+                for (const k of ['ln','cm']) if (enabled[k]) {
+                    const snap=tacticsClans[k]; if (!snap) continue;
+                    (snap.members||[]).forEach(m=>{ const r=tacticsRegionCell(m.currentRegion); if (r && r.key===cell.key) memberHere.push({k,m}); });
+                }
+                const label=showLands && ownerText ? ownerText : cell.key;
+                btn.innerHTML='<span>'+label+(showPlayers && memberHere.length ? (showNames ? '<br>'+memberHere.length+' 👤' : '<br>👤 '+memberHere.length) : '')+'</span>';
+                btn.title=`${cell.key} · ${cell.name}\nВладение в импортированных данных: ${ownerText || 'не указано'}\nИгроков в регионе: ${memberHere.length}`;
+                btn.onclick=()=>showTacticsCellDetails(cell,owners,memberHere); layer.appendChild(btn);
+                if (showPlayers) memberHere.slice(0,5).forEach((entry,i)=>{
+                    const pin=document.createElement('div'); pin.className='tactics-player-pin '+entry.k; pin.style.left=(cell.x + (i%2===0?-2.4:2.4))+'%'; pin.style.top=(cell.y + (Math.floor(i/2)*2.6 + 3.8))+'%';
+                    pin.textContent=showNames?`${TACTICS_CLANS[entry.k].tag}: ${entry.m.name}`:TACTICS_CLANS[entry.k].tag;
+                    pin.title=`${entry.m.name} · ${entry.m.currentRegion || 'регион не указан'}${entry.m.lastLoginAt ? ' · вход '+entry.m.lastLoginAt : ''}`; pins.appendChild(pin);
+                });
+            });
+            const cards=document.getElementById('tactics-clan-cards'); cards.innerHTML='';
+            for (const k of ['h13','ln','cm']) {
+                if (!enabled[k]) continue;
+                const d=TACTICS_CLANS[k], c=tacticsClans[k]; const card=document.createElement('div'); card.className='rounded-xl border p-3 space-y-1'; card.style.borderColor=d.color+'88'; card.style.background='rgba(15,23,42,.88)';
+                if (!c && k==='h13') { const held=CELLS_DATA.filter(cell=>siegeZonesState[cell.key]?.state==='owned').length; const located=Object.values(iamHereState).reduce((n,a)=>n+(Array.isArray(a)?a.length:0),0); card.innerHTML=`<div class="font-bold" style="color:${d.color}">${d.icon} ${d.tag} · ${d.name}</div><div class="text-[10px] text-slate-300">Удерживаемых земель по карте осады: <b>${held}</b></div><div class="text-[10px] text-slate-300">Отмеченных позиций бойцов: <b>${located}</b></div><div class="text-[10px] text-slate-500">Наши территории и позиции берутся из действующих данных штаба.</div>`; }
+                else if (!c) { card.innerHTML=`<div class="font-bold" style="color:${d.color}">${d.icon} ${d.tag} · ${d.name}</div><div class="text-[10px] text-slate-500">Нет импортированных данных</div>`; }
+                else {
+                    const nums=n=>Number(n||0).toLocaleString('ru-RU');
+                    const roster=(c.members||[]).map(m=>`<div class="border-t border-slate-700/70 py-1.5"><div class="flex items-start justify-between gap-2"><b class="text-slate-100">${escapeTacticsHtml(m.name)}</b><span class="shrink-0 text-[9px]" style="color:${d.color}">${escapeTacticsHtml(m.rank||'')}</span></div><div class="text-[10px] text-slate-400">📍 ${escapeTacticsHtml(m.currentRegion||'Местоположение не указано')} · Ур. ${nums(m.level)}</div><div class="text-[10px] text-slate-300">Сила: <b>${nums(m.power)}</b> · Неделя: <b>${nums(m.weeklyPoints)}/2000</b> · Всего: <b>${nums(m.lifetimePoints)}</b></div><div class="text-[9px] text-slate-500">Последний вход: ${m.lastLoginAt ? escapeTacticsHtml(m.lastLoginAt) : 'нет данных'}</div></div>`).join('');
+                    card.innerHTML=`<div class="font-bold" style="color:${d.color}">${d.icon} ${escapeTacticsHtml(c.name)} <span class="text-[10px]">[${d.tag}]</span></div><div class="text-[10px] text-slate-300">Участники: <b>${nums(c.membersCount)}</b> · лимит земель: <b>${nums(c.landCap)}</b></div><div class="text-[10px] text-slate-300">Репутация: <b>${nums(c.reputation)}</b></div><div class="text-[10px] text-slate-300">HUNT: <b>${nums(c.storageHunt)}</b></div><div class="text-[10px] text-slate-300">Золото: <b>${nums(c.treasuryCoins)}</b></div><div class="text-[10px] text-slate-300">Опыт: <b>${nums(c.xp)}</b>${c.xpNext ? ' · до уровня: <b>'+nums(c.xpNext)+'</b>' : ''}</div><div class="text-[10px] text-slate-400">В JSON участников: ${c.members.length} · данные земель: ${c.heldRegions.length || 'отдельный список не найден'}</div><div class="text-[9px] text-slate-500">Импорт: ${new Date(c.importedAt).toLocaleString('ru-RU')}</div><details class="mt-2"><summary class="cursor-pointer rounded-lg border border-slate-700 bg-slate-950/70 px-2 py-2 text-[10px] font-bold text-slate-200">Состав клана · ${c.members.length}</summary><div class="mt-1 max-h-72 overflow-y-auto pr-1">${roster || '<div class="py-2 text-[10px] text-slate-500">Состав не найден в JSON</div>'}</div></details>`;
+                }
+                cards.appendChild(card);
+            }
+            const imported=Object.values(tacticsClans).filter(c=>c?.importedAt).map(c=>`${c.tag}: ${new Date(c.importedAt).toLocaleString('ru-RU')}`);
+            document.getElementById('tactics-sync-status').textContent=(imported.length?'Последние снимки · '+imported.join(' · '):'Данные конкурентов ещё не импортированы.') + (tacticsStorageMode==='shared' ? ' · общее хранилище Supabase' : ' · локальная копия этого браузера');
+        }
+        function escapeTacticsHtml(v) { return String(v ?? '').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+        function showTacticsCellDetails(cell,owners,members) {
+            const ownerText=owners.length?owners.map(k=>TACTICS_CLANS[k].tag+' · '+TACTICS_CLANS[k].name).join(', '):'Нет подтверждённых данных о владельце';
+            const memberText=members.length?members.map(({k,m})=>`${TACTICS_CLANS[k].tag} · ${m.name}${m.currentRegion?' · '+m.currentRegion:''}`).join('\n'):'В импортированных данных нет игроков, сопоставленных с этой клеткой.';
+            alert(`${cell.key} — ${cell.name}\nВладение: ${ownerText}\n\nИгроки:\n${memberText}`);
+        }
+        // --- конец Тактики ---
+
+        window.addEventListener('DOMContentLoaded', () => { initMapZoom(); syncMapFilterControls(); checkAuthOnLoad(); loadTacticsSnapshots(); });
         setInterval(() => {
             advanceExpiredZoneCycles();
             renderSiege();
             if (selectedSiegeCellId && !document.getElementById('cell-card-modal').classList.contains('hidden')) refreshZoneCard(selectedSiegeCellId);
         }, 60000);
     </script>
+
+    <!-- ИМПОРТ JSON КОНКУРЕНТОВ -->
+    <div id="tactics-import-modal" class="fixed inset-0 z-[90] hidden items-center justify-center bg-slate-950/85 backdrop-blur-sm p-3" onclick="closeTacticsImport()">
+      <div class="w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-2xl border border-violet-700/60 bg-slate-900 p-4 shadow-2xl space-y-3" onclick="event.stopPropagation()">
+        <div class="flex items-center justify-between gap-2"><div><h3 class="text-sm font-black text-white">Импорт данных клана</h3><p class="text-[10px] text-slate-400 mt-1">Открой страницу клана в игре, скопируй перехваченный JSON и вставь сюда.</p></div><button onclick="closeTacticsImport()" class="rounded-lg bg-slate-800 px-3 py-1.5 text-slate-300">✕</button></div>
+        <div class="grid grid-cols-2 gap-2"><label class="text-xs text-slate-300">Клан<select id="tactics-import-clan" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 p-2 text-sm text-white"><option value="ln">LN · Легион</option><option value="cm">CM · CoinMisha</option></select></label><div class="flex items-end"><button onclick="pasteTacticsClipboard()" class="w-full rounded-lg border border-cyan-700 bg-cyan-950/70 px-3 py-2 text-xs font-bold text-cyan-200">📋 Вставить из буфера</button></div></div>
+        <textarea id="tactics-import-json" rows="9" class="w-full rounded-lg border border-slate-700 bg-slate-950 p-3 font-mono text-[11px] text-slate-100" placeholder="Вставь JSON ответа страницы клана сюда…"></textarea>
+        <div id="tactics-import-message" class="text-xs text-slate-400">Номер участника не используется как постоянный ID: список состава обновляется при каждом импорте.</div>
+        <div class="flex gap-2"><button onclick="importTacticsClanJson()" class="flex-1 rounded-lg bg-violet-700 px-3 py-2.5 text-xs font-bold text-white">Проверить и сохранить</button><button onclick="closeTacticsImport()" class="rounded-lg bg-slate-800 px-4 py-2.5 text-xs text-slate-300">Отмена</button></div>
+      </div>
+    </div>
+
+    <nav id="h13-bottom-nav" aria-label="Основная навигация H13">
+      <button class="h13-nav-btn" data-tab="shelters" onclick="switchTab('shelters')"><span class="h13-nav-icon">⛺</span><span>Убежища</span></button>
+      <button class="h13-nav-btn" data-tab="arsenal" onclick="switchTab('arsenal')"><span class="h13-nav-icon">🎒</span><span>Арсенал</span></button>
+      <button class="h13-nav-btn active" data-tab="siege" onclick="switchTab('siege')"><span class="h13-nav-icon">⚔️</span><span>Осада</span></button>
+      <button class="h13-nav-btn" data-tab="tactics" onclick="switchTab('tactics')"><span class="h13-nav-icon">🎯</span><span>Тактика</span></button>
+      <button class="h13-nav-btn" data-tab="stats" onclick="switchTab('stats')"><span class="h13-nav-icon">📊</span><span>Статистика</span></button>
+    </nav>
+
 </body>
 </html>
