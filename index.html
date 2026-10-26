@@ -431,7 +431,181 @@
         .tactics-filter input { accent-color:#a78bfa; width:15px; height:15px; }
         @media (min-width:768px) { #h13-bottom-nav { left:50%; right:auto; width:min(620px,calc(100% - 32px)); transform:translateX(-50%); border:1px solid rgba(167,139,250,.35); border-bottom:0; border-radius:16px 16px 0 0; } }
 
-    </style>
+    
+/* H13 map refresh — compact controls, room for the map, responsive scrolling */
+html, body { min-height:100%; }
+body { padding:5px 5px calc(72px + env(safe-area-inset-bottom)) !important; overflow-x:hidden; }
+#main-app { max-width:none !important; width:100%; }
+#main-app > header { margin-bottom:5px !important; padding:5px 8px !important; gap:4px !important; border-radius:10px !important; }
+#main-app > header h1 { display:none !important; }
+#main-app > header > div:first-child { width:auto !important; gap:6px !important; }
+#main-app > header > div:last-child { width:auto !important; padding:2px 6px !important; gap:6px !important; border:0 !important; background:transparent !important; }
+#main-app > header #current-user-display { color:#fcd34d !important; }
+#main-app > header #user-role-badge { font-size:10px !important; padding:3px 6px !important; }
+#tab-content-siege { max-width:none !important; width:100%; gap:4px !important; }
+#tab-content-siege > .flex.flex-wrap.items-center { display:none !important; }
+#tab-content-siege > button[onclick="openDamageJournalModal()"] { display:none !important; }
+#tab-content-siege > div.relative { padding:0 !important; border:0 !important; background:transparent !important; box-shadow:none !important; min-height:0 !important; overflow:visible !important; }
+#zone-map-toolbar { display:none !important; }
+#siege-map-container, #map-container, #tactics-map-container {
+  width:100% !important; max-width:none !important; margin:0 !important;
+  border-radius:10px; touch-action:pan-y; overscroll-behavior:contain;
+}
+#siege-map-container { flex:none; }
+#siege-map-container.is-zoomed, #map-container.is-zoomed, #tactics-map-container.is-zoomed { touch-action:none; }
+#siege-map-stage, #shelters-map-stage, #tactics-map-stage { will-change:transform; }
+.map-zoom-controls { left:5px !important; bottom:5px !important; z-index:54 !important; }
+#map-layers-toggle { top:5px !important; right:5px !important; width:36px; height:36px; }
+#personal-mark-toggle { right:5px !important; bottom:5px !important; z-index:54 !important; }
+#personal-mark-hint, #siege-role-hint { display:none !important; }
+#h13-map-journal-btn, #h13-map-summary-btn, #multi-select-toggle-btn[data-compact-summary='1'], #h13-map-help-btn, #shelters-map-help-btn {
+  position:absolute; top:5px; z-index:55; height:36px; min-width:36px; padding:0 9px;
+  display:flex; align-items:center; justify-content:center; gap:5px;
+  border-radius:9px; background:rgba(2,6,23,.94); color:#e2e8f0;
+  border:1px solid rgba(148,163,184,.65); box-shadow:0 3px 12px rgba(0,0,0,.35);
+  font-size:12px; font-weight:900; line-height:1; white-space:nowrap;
+}
+#h13-map-journal-btn { left:5px; border-color:rgba(34,211,238,.65); color:#a5f3fc; }
+#multi-select-toggle-btn[data-compact-summary='1'] { left:calc(5px + 40px + 5px); max-width:calc(100% - 150px); overflow:hidden; }
+#h13-map-help-btn { right:47px; width:36px; padding:0; font-size:18px; }
+#siege-map-container #map-layers-toggle { right:5px !important; }
+#siege-map-container #h13-map-help-btn { right:47px; }
+#zone-sync-row {
+  display:flex; width:100%; box-sizing:border-box; align-items:center; justify-content:center;
+  gap:10px; margin:0 0 7px; padding:6px 8px; border-radius:9px;
+  background:rgba(2,6,23,.76); border:1px solid rgba(52,211,153,.24);
+}
+#zone-sync-label {
+  display:block !important; position:static; flex:1 1 auto; min-width:0; width:auto !important;
+  box-sizing:border-box; z-index:10; margin:0 !important; text-align:center !important;
+  padding:3px 7px; border-radius:7px; color:#d1fae5 !important;
+  background:transparent; border:0; font-size:11px !important; font-weight:800; letter-spacing:.01em;
+  text-shadow:0 1px 2px #000 !important; -webkit-text-stroke:0 !important;
+  pointer-events:none; overflow-wrap:anywhere;
+}
+#zone-sync-label::first-line { font-weight:900; }
+#zone-import-open-btn:not(.hidden) {
+  display:flex !important; position:static; flex:0 0 auto; align-items:center; justify-content:center; gap:6px;
+  min-height:34px; height:34px; padding:0 11px; border-radius:9px;
+  border:1px solid rgba(52,211,153,.72); background:rgba(2,44,34,.96); color:#a7f3d0;
+  font-size:11px; font-weight:900; line-height:1; white-space:nowrap; box-shadow:0 2px 8px rgba(0,0,0,.25);
+  touch-action:manipulation;
+}
+#zone-import-open-btn.hidden { display:none !important; }
+#zone-import-open-btn .h13-zone-import-icon { font-size:15px; line-height:1; }
+#siege-map-container { margin-top:0 !important; }
+#siege-map-container .map-zoom-controls { bottom:5px !important; }
+#siege-map-container #personal-mark-toggle { bottom:5px !important; }
+#siege-map-container #map-layers-panel { z-index:70; }
+@media (max-width:520px) {
+  #zone-sync-row { flex-wrap:wrap; gap:5px; padding:6px; }
+  #zone-sync-label { flex:1 1 100%; font-size:10px !important; }
+  #zone-import-open-btn:not(.hidden) { min-height:32px; height:32px; }
+}
+
+#tab-content-shelters {
+  display:flex !important; flex-direction:column !important; gap:6px !important;
+  width:100%; max-width:none !important;
+}
+#tab-content-shelters.hidden { display:none !important; }
+#shelters-map-panel {
+  order:0; width:100%; padding:0 !important; min-height:0 !important;
+  align-items:stretch !important; justify-content:flex-start !important;
+}
+#shelters-map-panel #map-container { max-width:none !important; }
+#shelters-roster-panel {
+  order:1; width:100%; height:auto !important; max-height:none !important;
+  padding:8px !important;
+}
+#shelters-map-panel > .mt-2\\.5 { margin-top:6px !important; }
+#shelters-map-panel > #shelter-count-edit-hint { display:none !important; }
+#tab-content-shelters #viewing-indicator { position:relative !important; top:auto !important; left:auto !important; right:auto !important; width:100%; margin:0 0 5px !important; }
+#shelters-map-help-btn { right:5px; }
+#shelters-map-help-btn { top:5px; }
+#tab-content-arsenal { max-width:none !important; width:100% !important; }
+#arsenal-section { max-height:calc(100dvh - 150px) !important; min-height:0 !important; padding:9px !important; }
+#tab-content-tactics { max-width:none !important; }
+#tab-content-tactics > .bg-slate-900\\/90:first-child { padding:9px !important; }
+#tab-content-tactics > .bg-slate-900\\/90:nth-child(2) { padding:4px !important; }
+#multi-select-bar { z-index:80 !important; }
+#h13-bottom-nav { padding-top:5px !important; }
+.personal-cell-cross {
+  inset:0 !important; width:100%; height:100%; display:block !important;
+  font-size:0 !important; text-shadow:none !important; transform:none !important;
+  color:transparent !important; overflow:visible; pointer-events:none;
+}
+.personal-cell-cross svg { position:absolute; inset:0; width:100%; height:100%; overflow:visible; }
+.personal-cell-cross line {
+  stroke:#ff2020; stroke-width:2.6; stroke-linecap:round;
+  vector-effect:non-scaling-stroke; filter:drop-shadow(0 0 1.2px #000) drop-shadow(0 0 2px #ff2020);
+}
+.shelter-count-badge {
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  font-size:clamp(8px,2.4vw,14px); line-height:1; font-weight:1000;
+  color:#fff; -webkit-text-stroke:.35px #000; paint-order:stroke fill;
+  text-shadow:0 1px 3px #000,0 0 4px #000; pointer-events:none; white-space:nowrap;
+}
+#h13-map-help-modal { position:fixed; inset:0; z-index:100; padding:14px; display:none; align-items:center; justify-content:center; background:rgba(2,6,23,.82); backdrop-filter:blur(8px); }
+#h13-map-help-modal.open { display:flex; }
+#h13-map-help-card { width:min(520px,100%); max-height:85dvh; overflow:auto; border:1px solid rgba(148,163,184,.45); border-radius:16px; background:#0f172a; padding:16px; box-shadow:0 20px 60px #0008; }
+#h13-map-help-card h3 { font-size:16px; font-weight:900; color:#e9d5ff; margin-bottom:10px; }
+#h13-map-help-card ul { list-style:disc; padding-left:20px; display:grid; gap:8px; font-size:12px; line-height:1.5; color:#e2e8f0; }
+@media (min-width:768px) {
+  body { padding:6px 8px calc(78px + env(safe-area-inset-bottom)) !important; }
+  #siege-map-container, #map-container, #tactics-map-container { width:min(100%, calc((100dvh - 125px) * 594 / 865)) !important; margin-left:auto !important; margin-right:auto !important; }
+  #siege-map-container { max-width:calc((100dvh - 125px) * 594 / 865) !important; }
+}
+@media (max-width:420px) {
+  #multi-select-toggle-btn[data-compact-summary='1'] { font-size:10px; padding:0 6px; }
+  #h13-map-journal-btn { padding:0 7px; }
+  #tab-content-shelters .cell-marker { border-width:1.5px; }
+}
+
+    
+/* H13 UI corrections: clear control lanes, mobile-safe hit areas, and a visible roster below the shelters map. */
+#h13-map-journal-btn, #multi-select-toggle-btn[data-compact-summary='1'] {
+  top:5px !important; height:38px !important; min-height:38px !important; box-sizing:border-box;
+  border-radius:10px !important; z-index:58 !important; display:flex !important; align-items:center; justify-content:center;
+  gap:6px; font-size:12px !important; line-height:1 !important; white-space:nowrap;
+}
+#h13-map-journal-btn { left:5px !important; width:auto; min-width:82px !important; padding:0 10px !important; }
+#multi-select-toggle-btn[data-compact-summary='1'] { left:92px !important; width:auto; min-width:82px !important; max-width:calc(100% - 190px) !important; padding:0 10px !important; overflow:hidden; }
+#h13-map-journal-btn .h13-map-control-icon { font-size:16px; line-height:1; }
+#multi-select-toggle-btn[data-compact-summary='1'] #multi-select-icon { font-size:15px; line-height:1; }
+#map-layers-toggle { width:40px !important; height:40px !important; min-width:40px; min-height:40px; z-index:58 !important; }
+#h13-map-help-btn, #shelters-map-help-btn { width:40px !important; height:40px !important; min-width:40px !important; min-height:40px !important; z-index:58 !important; font-size:19px !important; }
+#siege-map-container #h13-map-help-btn { right:50px !important; }
+#siege-map-container #map-layers-toggle { right:5px !important; }
+#shelters-map-help-btn { right:5px !important; top:5px !important; }
+#personal-mark-toggle { width:44px !important; min-width:44px !important; height:44px !important; min-height:44px !important; padding:0 !important; font-size:25px !important; line-height:1 !important; }
+.map-zoom-controls { gap:3px !important; padding:3px !important; }
+.map-zoom-controls button { width:26px !important; min-width:26px; height:26px !important; font-size:16px !important; }
+.map-zoom-controls button, #personal-mark-toggle, #map-layers-toggle, #h13-map-journal-btn, #multi-select-toggle-btn[data-compact-summary='1'], #h13-map-help-btn, #shelters-map-help-btn { touch-action:manipulation; }
+#shelters-roster-panel {
+  order:1 !important; height:auto !important; min-height:270px !important; max-height:none !important;
+  display:flex !important; flex-direction:column !important; flex:0 0 auto !important;
+}
+#shelters-roster-panel #players-list {
+  display:block !important; flex:1 1 auto !important; min-height:150px !important; max-height:55vh !important;
+  overflow-y:auto !important; overscroll-behavior:contain; -webkit-overflow-scrolling:touch;
+}
+#shelters-map-panel { order:0 !important; flex:0 0 auto !important; }
+#tab-content-shelters #viewing-indicator { flex-shrink:0; }
+#h13-map-help-card h4 { color:#67e8f9; font-size:11px; font-weight:900; letter-spacing:.06em; text-transform:uppercase; margin:10px 0 5px; }
+#h13-map-help-card .h13-help-section + .h13-help-section { border-top:1px solid rgba(71,85,105,.6); margin-top:10px; padding-top:2px; }
+@media (max-width:420px) {
+  #h13-map-journal-btn, #multi-select-toggle-btn[data-compact-summary='1'] { width:40px !important; min-width:40px !important; max-width:40px !important; padding:0 !important; }
+  #h13-map-journal-btn { left:5px !important; }
+  #multi-select-toggle-btn[data-compact-summary='1'] { left:50px !important; }
+  #h13-map-journal-btn .h13-map-control-label, #multi-select-toggle-btn[data-compact-summary='1'] #multi-select-text { display:none !important; }
+  #h13-map-journal-btn .h13-map-control-icon, #multi-select-toggle-btn[data-compact-summary='1'] #multi-select-icon { font-size:18px !important; }
+  #h13-map-help-btn { right:50px !important; }
+  #personal-mark-toggle { width:44px !important; min-width:44px !important; }
+  #shelters-roster-panel { min-height:250px !important; }
+  #shelters-roster-panel #players-list { min-height:140px !important; max-height:50vh !important; }
+}
+
+</style>
 </head>
 <body id="app-background" class="bg-slate-950 text-slate-100 min-h-screen font-sans p-2 md:p-3 pb-24">
 
@@ -502,16 +676,13 @@
                 <div id="world-notice-latest" class="text-xs text-slate-200">Загрузка последних атак…</div>
             </button>
             <!-- 1. ИГРОВАЯ КАРТА -->
-            <div class="bg-slate-900/90 backdrop-blur p-2.5 rounded-xl border border-slate-800 flex flex-col items-center justify-center relative min-h-[520px]">
+            <div class="bg-slate-900/90 backdrop-blur p-2.5 rounded-xl border border-slate-800 flex flex-col items-center justify-center relative min-h-0">
                 
                 <!-- Верхняя панель инструментов карты -->
-                <div class="absolute top-2 left-2 right-2 flex justify-between items-center z-20 pointer-events-none">
-                    <div class="flex items-center gap-2 pointer-events-auto">
-                        <button id="multi-select-toggle-btn" onclick="toggleMultiSelectMode()" class="bg-slate-950/90 hover:bg-amber-900/50 border border-amber-500/50 text-amber-300 px-2.5 py-1 rounded-lg text-xs font-bold shadow flex items-center gap-1.5 transition-all">
-                            <span id="multi-select-icon">☑</span> <span id="multi-select-text">Создать сводку Штаба</span>
-                        </button>
-                    </div>
-                    <div class="text-[11px] text-slate-300 bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800 shadow pointer-events-auto" id="siege-role-hint">Режим просмотра</div>
+                <div class="absolute top-0 left-0 right-0 z-20 pointer-events-none">
+                    <button id="multi-select-toggle-btn" onclick="toggleMultiSelectMode()" class="bg-slate-950/90 hover:bg-amber-900/50 border border-amber-500/50 text-amber-300 px-2.5 py-1 rounded-lg text-xs font-bold shadow flex items-center gap-1.5 transition-all">
+                        <span id="multi-select-icon">☑</span> <span id="multi-select-text">Создать сводку Штаба</span>
+                    </button>
                 </div>
 
                 <div class="w-full flex flex-wrap items-center justify-center gap-1.5 mt-8 mb-1 px-1 relative z-20" id="zone-map-toolbar">
@@ -529,7 +700,7 @@
                     </div>
                     <button id="map-layers-toggle" type="button" onclick="toggleMapLayersPanel(event)" aria-label="Открыть тактические слои" title="Тактические слои">☰</button>
                     <div id="personal-mark-hint">Режим личных меток: нажмите на клетку, чтобы поставить или убрать ✕. Метки хранятся только в этом браузере и не сбрасываются автоматически.</div>
-                    <button id="personal-mark-toggle" type="button" onclick="togglePersonalMarkMode(event)" aria-pressed="false" title="Личные метки на карте">✕ <span>Метки</span></button>
+                    <button id="personal-mark-toggle" type="button" onclick="togglePersonalMarkMode(event)" aria-pressed="false" title="Личные метки на карте" aria-label="Включить или выключить личные метки">✕</button>
                     <div id="map-layers-panel" class="hidden" aria-hidden="true">
                         <div id="map-layers-backdrop" onclick="closeMapLayersPanel()" aria-label="Закрыть меню"></div>
                         <div id="map-layers-drawer" onclick="event.stopPropagation()">
@@ -620,7 +791,39 @@
 
         <!-- ВКЛАДКА 2: УБЕЖИЩА -->
         <div id="tab-content-shelters" class="grid grid-cols-1 lg:grid-cols-12 gap-3 hidden">
-            <div class="lg:col-span-4 bg-slate-900/90 backdrop-blur p-2.5 rounded-xl border border-slate-800 flex flex-col h-[565px]">
+            <div id="shelters-map-panel" class="lg:col-span-8 bg-transparent p-2 flex flex-col items-center justify-center relative min-h-[520px]">
+                <div id="viewing-indicator" class="absolute top-2 left-4 right-4 bg-amber-950/90 border border-amber-600/60 px-3 py-1 rounded-lg text-xs text-amber-200 flex justify-between items-center z-20 hidden shadow-lg">
+                    <span>👀 Убежища игрока: <strong id="viewing-nick-name" class="text-white"></strong></span>
+                    <button onclick="clearViewingPlayer()" class="text-amber-400 hover:text-white text-[10px] underline font-medium">Сбросить</button>
+                </div>
+
+                <div id="map-container" class="map-zoom-viewport relative w-full max-w-[490px]" data-map-zoom="shelters" style="aspect-ratio: 594 / 865;">
+                    <div id="shelters-map-stage" class="map-zoom-stage">
+                        <img id="map-img" src="map.png" class="absolute inset-0 w-full h-full object-contain rounded-lg shadow-2xl" alt="Карта" onerror="onMapError()">
+                        <div id="placeholder" class="absolute inset-0 flex flex-col items-center justify-center text-red-400 bg-slate-950/95 rounded-lg hidden p-4 text-center">
+                            <p class="font-semibold text-sm">Картинка map.png не найдена!</p>
+                        </div>
+                        <div id="cells-layer" class="absolute inset-0"></div>
+                    </div>
+                    <button id="shelters-map-help-btn" type="button" onclick="openMapHelp('shelters')" aria-label="Памятка по карте убежищ" title="Памятка по карте">ⓘ</button>
+                    <div class="map-zoom-controls" aria-label="Масштаб карты">
+                        <button type="button" onclick="changeMapZoom('shelters',-0.1)" aria-label="Уменьшить">−</button><span id="shelters-zoom-level" class="map-zoom-level">100%</span><button type="button" onclick="changeMapZoom('shelters',0.1)" aria-label="Увеличить">+</button><button type="button" onclick="resetMapZoom('shelters')" aria-label="Сбросить масштаб" title="Вписать карту">↺</button>
+                    </div>
+                </div>
+                
+                <div class="mt-2.5 flex flex-wrap items-center justify-center gap-3">
+                    <label id="shelter-count-edit-label" class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer select-none bg-slate-900/80 border border-slate-700 rounded-lg px-3 py-2 transition-colors">
+                        <input id="shelter-count-edit-toggle" type="checkbox" onchange="setShelterCountEditMode(this.checked)" class="accent-amber-500">
+                        <span>✎ Точное количество</span>
+                    </label>
+                    <button onclick="toggleAllForCurrentPlayer()" class="bg-amber-600 hover:bg-amber-500 text-white text-xs px-3 py-1.5 rounded-lg font-medium transition-colors shadow">
+                        ⚡ Отметить все
+                    </button>
+                </div>
+                <div id="shelter-count-edit-hint" class="mt-1 text-[10px] text-slate-500 text-center">Тап по клетке — отметить или снять владение</div>
+            </div>
+
+            <div id="shelters-roster-panel" class="lg:col-span-4 bg-slate-900/90 backdrop-blur p-2.5 rounded-xl border border-slate-800 flex flex-col h-[565px]">
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-1.5 mb-1.5 pb-1.5 border-b border-slate-800">
                     <div class="flex items-center gap-2">
                         <h2 class="text-xs font-semibold text-slate-200">👥 Состав (<span id="players-count">0</span>)</h2>
@@ -651,37 +854,6 @@
                         <input type="file" id="bg-file-input" accept="image/*" onchange="changeBackground(event)" class="text-[10px] text-slate-400 file:mr-2 file:py-0.5 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-amber-600 file:text-white hover:file:bg-amber-500 cursor-pointer">
                     </div>
                 </div>
-            </div>
-
-            <div class="lg:col-span-8 bg-transparent p-2 flex flex-col items-center justify-center relative min-h-[520px]">
-                <div id="viewing-indicator" class="absolute top-2 left-4 right-4 bg-amber-950/90 border border-amber-600/60 px-3 py-1 rounded-lg text-xs text-amber-200 flex justify-between items-center z-20 hidden shadow-lg">
-                    <span>👀 Убежища игрока: <strong id="viewing-nick-name" class="text-white"></strong></span>
-                    <button onclick="clearViewingPlayer()" class="text-amber-400 hover:text-white text-[10px] underline font-medium">Сбросить</button>
-                </div>
-
-                <div id="map-container" class="map-zoom-viewport relative w-full max-w-[490px]" data-map-zoom="shelters" style="aspect-ratio: 594 / 865;">
-                    <div id="shelters-map-stage" class="map-zoom-stage">
-                        <img id="map-img" src="map.png" class="absolute inset-0 w-full h-full object-contain rounded-lg shadow-2xl" alt="Карта" onerror="onMapError()">
-                        <div id="placeholder" class="absolute inset-0 flex flex-col items-center justify-center text-red-400 bg-slate-950/95 rounded-lg hidden p-4 text-center">
-                            <p class="font-semibold text-sm">Картинка map.png не найдена!</p>
-                        </div>
-                        <div id="cells-layer" class="absolute inset-0"></div>
-                    </div>
-                    <div class="map-zoom-controls" aria-label="Масштаб карты">
-                        <button type="button" onclick="changeMapZoom('shelters',-0.1)" aria-label="Уменьшить">−</button><span id="shelters-zoom-level" class="map-zoom-level">100%</span><button type="button" onclick="changeMapZoom('shelters',0.1)" aria-label="Увеличить">+</button><button type="button" onclick="resetMapZoom('shelters')" aria-label="Сбросить масштаб" title="Вписать карту">↺</button>
-                    </div>
-                </div>
-                
-                <div class="mt-2.5 flex flex-wrap items-center justify-center gap-3">
-                    <label id="shelter-count-edit-label" class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer select-none bg-slate-900/80 border border-slate-700 rounded-lg px-3 py-2 transition-colors">
-                        <input id="shelter-count-edit-toggle" type="checkbox" onchange="setShelterCountEditMode(this.checked)" class="accent-amber-500">
-                        <span>✎ Точное количество</span>
-                    </label>
-                    <button onclick="toggleAllForCurrentPlayer()" class="bg-amber-600 hover:bg-amber-500 text-white text-xs px-3 py-1.5 rounded-lg font-medium transition-colors shadow">
-                        ⚡ Отметить все
-                    </button>
-                </div>
-                <div id="shelter-count-edit-hint" class="mt-1 text-[10px] text-slate-500 text-center">Тап по клетке — отметить или снять владение</div>
             </div>
         </div>
 
@@ -965,6 +1137,7 @@
         }
 
         let dynamicMembers = [];
+        let fightersLoadError = null;
         let fighterToDeleteName = null;
 
         const CELLS_DATA = [
@@ -1179,7 +1352,7 @@
                 if (name === 'tactics') el.classList.toggle('flex', name === tabName);
             });
             document.querySelectorAll('#h13-bottom-nav .h13-nav-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tabName));
-            if (tabName === 'shelters') { renderCells(); applyMapZoom('shelters', false); }
+            if (tabName === 'shelters') { renderPlayersList(); renderCells(); applyMapZoom('shelters', false); }
             else if (tabName === 'siege') { renderSiege(); applyMapZoom('siege', false); }
             else if (tabName === 'tactics') { renderTacticsMap(); applyMapZoom('tactics', false); }
             else if (tabName === 'arsenal') { renderArsenalList(); }
@@ -1225,8 +1398,27 @@
                     }
                 }
 
-                if (resultByTable.fighters && !resultByTable.fighters.error && resultByTable.fighters.data) {
-                    dynamicMembers = resultByTable.fighters.data;
+                if (requested.has('fighters')) {
+                    const fightersResult = resultByTable.fighters;
+                    if (fightersResult && fightersResult.error) {
+                        fightersLoadError = fightersResult.error.message || 'Не удалось получить данные таблицы fighters.';
+                        console.warn('Не удалось загрузить список бойцов из fighters:', fightersResult.error);
+                    } else if (fightersResult && Array.isArray(fightersResult.data)) {
+                        // Не подменяем реальные данные: берём только записи с непустым именем.
+                        const seenFighterNames = new Set();
+                        dynamicMembers = fightersResult.data
+                            .filter(row => row && typeof row.name === 'string' && row.name.trim())
+                            .map(row => ({ ...row, name: row.name.trim() }))
+                            .filter(row => {
+                                const key = row.name.toLocaleLowerCase();
+                                if (seenFighterNames.has(key)) return false;
+                                seenFighterNames.add(key);
+                                return true;
+                            });
+                        fightersLoadError = null;
+                    } else {
+                        fightersLoadError = 'Ответ Supabase не содержит список участников.';
+                    }
                 }
 
                 if (resultByTable.shelters && !resultByTable.shelters.error && resultByTable.shelters.data) {
@@ -1512,12 +1704,14 @@
             if (isSelectMode) {
                 toggleBtn.className = 'bg-amber-500 text-slate-950 font-black px-2.5 py-1 rounded-lg text-xs shadow-lg flex items-center gap-1.5 transition-all ring-2 ring-amber-300';
                 iconEl.textContent = '✅';
-                textEl.textContent = 'Режим выбора ВКЛ';
+                textEl.textContent = 'Выбор ВКЛ';
             } else {
                 toggleBtn.className = 'bg-slate-950/90 hover:bg-amber-900/50 border border-amber-500/50 text-amber-300 px-2.5 py-1 rounded-lg text-xs font-bold shadow flex items-center gap-1.5 transition-all';
-                iconEl.textContent = '☑';
-                textEl.textContent = 'Создать сводку Штаба';
+                iconEl.textContent = '📋';
+                textEl.textContent = 'Сводка';
             }
+            toggleBtn.title = isSelectMode ? 'Выключить выбор клеток' : 'Создать сводку штаба';
+            toggleBtn.setAttribute('aria-label', toggleBtn.title);
 
             renderSiege();
             updateMultiSelectBar();
@@ -1826,8 +2020,10 @@
             container.innerHTML = '';
             
             const allCurrentMembers = getAllMembers();
-            document.getElementById('players-count').textContent = allCurrentMembers.length;
-            const searchQuery = document.getElementById('search-input').value.toLowerCase().trim();
+            const countEl = document.getElementById('players-count');
+            if (countEl) countEl.textContent = allCurrentMembers.length;
+            const searchInput = document.getElementById('search-input');
+            const searchQuery = searchInput ? searchInput.value.toLowerCase().trim() : '';
 
             let totalClanStats = { purple: 0, blue: 0, green: 0, yellow: 0 };
             for (const [cellId, players] of Object.entries(sheltersState)) {
@@ -1860,7 +2056,7 @@
             ];
 
             sections.forEach(sec => {
-                const filteredList = sec.list.filter(nick => nick.toLowerCase().includes(searchQuery));
+                const filteredList = sec.list.filter(nick => typeof nick === 'string' && nick.toLowerCase().includes(searchQuery));
                 if (filteredList.length === 0) return;
 
                 const sectionDiv = document.createElement('div');
@@ -1920,7 +2116,38 @@
                 });
                 container.appendChild(sectionDiv);
             });
+
+            // Empty/error states are based on the real Supabase result, never on invented members.
+            if (!container.children.length) {
+                const status = document.createElement('div');
+                status.className = 'rounded-lg border border-slate-700 bg-slate-950/70 p-3 text-center text-[11px] leading-relaxed text-slate-300';
+                if (fightersLoadError) {
+                    const title = document.createElement('div');
+                    title.className = 'font-bold text-amber-300';
+                    title.textContent = 'Не удалось загрузить состав клана';
+                    const detail = document.createElement('div');
+                    detail.className = 'mt-1 text-slate-400';
+                    detail.textContent = fightersLoadError;
+                    const retry = document.createElement('button');
+                    retry.type = 'button'; retry.className = 'mt-2 rounded-lg border border-cyan-700 bg-cyan-950/70 px-3 py-2 font-bold text-cyan-200';
+                    retry.textContent = 'Повторить загрузку'; retry.onclick = retryFightersList;
+                    status.append(title, detail, retry);
+                } else if (allCurrentMembers.length === 0) {
+                    status.textContent = 'Список участников пуст: Supabase вернул 0 записей из таблицы fighters.';
+                } else {
+                    status.textContent = 'По запросу «' + searchQuery + '» участников не найдено.';
+                }
+                container.appendChild(status);
+            }
             renderArsenalList();
+        }
+
+        async function retryFightersList() {
+            const status = document.querySelector('#players-list button');
+            if (status) { status.disabled = true; status.textContent = 'Загрузка…'; }
+            await loadDataFromSupabase(['fighters']);
+            renderPlayersList();
+            if (typeof setupProfileSelector === 'function' && document.getElementById('select-profile-screen') && !document.getElementById('select-profile-screen').classList.contains('hidden')) setupProfileSelector();
         }
 
         /* --- БЛОК АРСЕНАЛА --- */
@@ -3434,7 +3661,7 @@ if (resetDamageCellIds.length) {
             personalMarkMode = !personalMarkMode;
             const btn = document.getElementById('personal-mark-toggle');
             const hint = document.getElementById('personal-mark-hint');
-            if (btn) { btn.classList.toggle('active', personalMarkMode); btn.setAttribute('aria-pressed', personalMarkMode ? 'true' : 'false'); btn.innerHTML = personalMarkMode ? '✕ <span>Метки: ВКЛ</span>' : '✕ <span>Метки</span>'; }
+            if (btn) { btn.classList.toggle('active', personalMarkMode); btn.setAttribute('aria-pressed', personalMarkMode ? 'true' : 'false'); btn.textContent = '✕'; btn.title = personalMarkMode ? 'Выключить личные метки' : 'Включить личные метки'; }
             if (hint) hint.style.display = personalMarkMode ? 'block' : 'none';
         }
         function togglePersonalCellMark(cell) {
@@ -4070,6 +4297,197 @@ if (resetDamageCellIds.length) {
             renderSiege();
             if (selectedSiegeCellId && !document.getElementById('cell-card-modal').classList.contains('hidden')) refreshZoneCard(selectedSiegeCellId);
         }, 60000);
+
+        // --- Компактный интерфейс карты; исходные обработчики и модель данных сохранены ---
+        function h13InsertMapControls() {
+            const siege = document.getElementById('siege-map-container');
+            if (siege) {
+                let journal = document.getElementById('h13-map-journal-btn');
+                if (!journal) {
+                    journal = document.createElement('button');
+                    journal.id = 'h13-map-journal-btn'; journal.type = 'button';
+                    journal.onclick = openDamageJournalModal;
+                    siege.appendChild(journal);
+                }
+                journal.innerHTML = '<span class="h13-map-control-icon" aria-hidden="true">📜</span><span class="h13-map-control-label">Журнал</span>';
+                journal.title = 'Открыть журнал атак'; journal.setAttribute('aria-label', 'Журнал атак');
+                journal.onclick = openDamageJournalModal;
+
+                const summary = document.getElementById('multi-select-toggle-btn');
+                if (summary) {
+                    summary.dataset.compactSummary = '1';
+                    summary.innerHTML = '<span id="multi-select-icon" aria-hidden="true">' + (isSelectMode ? '✅' : '📋') + '</span><span id="multi-select-text">' + (isSelectMode ? 'Выбор' : 'Сводка') + '</span>';
+                    summary.title = isSelectMode ? 'Выключить выбор клеток' : 'Создать сводку штаба';
+                    summary.setAttribute('aria-label', summary.title);
+                    summary.onclick = toggleMultiSelectMode;
+                    if (summary.parentElement !== siege) siege.appendChild(summary);
+                }
+
+                const layers = document.getElementById('map-layers-toggle');
+                if (layers) { layers.textContent = '☷'; layers.title = 'Слои и фильтры'; layers.setAttribute('aria-label', 'Открыть слои и фильтры'); }
+
+                // Переносим существующую кнопку импорта в строку статуса синхронизации,
+                // не создавая копию и сохраняя исходный onclick и проверку ролей.
+                const zoneImport = document.getElementById('zone-import-open-btn');
+                const sync = document.getElementById('zone-sync-label');
+                if (zoneImport) {
+                    zoneImport.innerHTML = '<span class="h13-zone-import-icon" aria-hidden="true">⇧</span><span class="h13-zone-import-label">Импорт JSON</span>';
+                    zoneImport.title = 'Импортировать JSON земель (только руководство)';
+                    zoneImport.setAttribute('aria-label', 'Импорт JSON земель');
+                    zoneImport.type = 'button';
+                }
+                if (sync && siege.parentElement) {
+                    let syncRow = document.getElementById('zone-sync-row');
+                    if (!syncRow) {
+                        syncRow = document.createElement('div');
+                        syncRow.id = 'zone-sync-row';
+                    }
+                    if (syncRow.parentElement !== siege.parentElement) siege.parentElement.insertBefore(syncRow, siege);
+                    if (sync.parentElement !== syncRow) syncRow.appendChild(sync);
+                    if (zoneImport && zoneImport.parentElement !== syncRow) syncRow.appendChild(zoneImport);
+                }
+
+                let help = document.getElementById('h13-map-help-btn');
+                if (!help) {
+                    help = document.createElement('button'); help.id = 'h13-map-help-btn'; help.type = 'button';
+                    help.onclick = () => openMapHelp('siege');
+                    siege.appendChild(help);
+                }
+                help.textContent = 'ⓘ'; help.title = 'Памятка по карте'; help.setAttribute('aria-label', 'Памятка по карте');
+                if (help.parentElement !== siege) siege.appendChild(help);
+
+            }
+            const sheltersMap = document.getElementById('map-container');
+            if (sheltersMap) {
+                let help = document.getElementById('shelters-map-help-btn');
+                if (!help) {
+                    help = document.createElement('button'); help.id = 'shelters-map-help-btn'; help.type = 'button';
+                    sheltersMap.appendChild(help);
+                }
+                help.textContent = 'ⓘ'; help.title = 'Памятка по карте убежищ'; help.setAttribute('aria-label', 'Памятка по карте убежищ');
+                help.onclick = () => openMapHelp('shelters');
+                if (help.parentElement !== sheltersMap) sheltersMap.appendChild(help);
+            }
+        }
+        function openMapHelp(kind) {
+            const modal = document.getElementById('h13-map-help-modal');
+            const title = document.getElementById('h13-map-help-title');
+            const content = document.getElementById('h13-map-help-content');
+            if (!modal || !title || !content) return;
+            const officer = currentUserRole === 'officer';
+            const sections = kind === 'shelters' ? [
+                { heading: 'Карта убежищ', items: [
+                    'Число на клетке показывает ваши убежища / все убежища на этой клетке. Например, 2/15 — два ваших из пятнадцати общих.',
+                    'Нажмите на клетку, чтобы отметить или снять своё убежище. Доступные действия зависят от выбранного профиля и прав.',
+                    'Масштаб: − уменьшить, + увеличить, ↺ вернуть исходный вид. На увеличенной карте можно перемещаться.'
+                ]},
+                { heading: 'Список бойцов', items: [
+                    'Список расположен под картой. Введите часть ника в поле поиска, чтобы найти участника.',
+                    'Числа 🟣 🔵 🟢 🟡 рядом с ником показывают количество убежищ каждого цвета, учтённое для этого бойца.'
+                ]}
+            ] : [
+                { heading: 'Как читать карту', items: [
+                    'Цвет и подписи клетки показывают её текущий статус. Таймер показывает оставшееся время, а значение урона — накопленный урон, если эти данные доступны.',
+                    'Нажмите на клетку, чтобы открыть её карточку с доступными сведениями и действиями.'
+                ]},
+                { heading: 'Журнал и сводка', items: [
+                    '📜 «Журнал» открывает записи атак.',
+                    '📋 «Сводка» включает выбор клеток для плана атаки. Повторное нажатие выключает режим выбора; сама сводка показывает выбранные цели и данные по ним.'
+                ]},
+                { heading: 'Слои и управление', items: [
+                    '☷ открывает слои и фильтры. Переключатели меняют отображение меток, статусов, таймеров и урона, но не изменяют сохранённые данные.',
+                    '✕ внизу справа включает личные метки. Они сохраняются только в этом браузере и не видны другим участникам.',
+                    'Используйте − / + для масштаба и ↺ для сброса. При увеличении карту можно перетаскивать; на исходном масштабе вертикальный жест прокручивает страницу.'
+                ]}
+            ];
+            if (officer) sections.push({heading:'Для офицеров и лидера',items: kind === 'shelters' ? [
+                'Назначение ролей и удаление бойца доступны офицеру в панели состава.',
+                'Специальные инструменты убежищ отображаются рядом с картой только для разрешённых ролей.'
+            ] : [
+                'Кнопка импорта данных земель и другие операции управления отображаются только при соответствующих правах.',
+                'Перед изменением данных проверьте выбранные клетки и содержимое карточки. Обычные участники не видят инструменты управления.'
+            ]});
+            title.textContent = kind === 'shelters' ? 'ⓘ Памятка: убежища' : 'ⓘ Памятка: осада';
+            content.innerHTML = sections.map(section => {
+                const heading = '<h4>' + section.heading.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</h4>';
+                const items = '<ul>' + section.items.map(item => '<li>' + item.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</li>').join('') + '</ul>';
+                return '<section class="h13-help-section">' + heading + items + '</section>';
+            }).join('');
+            modal.classList.add('open');
+            modal.setAttribute('aria-hidden', 'false');
+        }
+        function closeMapHelp() {
+            const modal=document.getElementById('h13-map-help-modal');
+            if(modal){modal.classList.remove('open');modal.setAttribute('aria-hidden','true');}
+        }
+        document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMapHelp();});
+
+        // Display per-player shelter count / total on occupied cells, without changing the saved data.
+        const h13OriginalRenderCells = renderCells;
+        renderCells = function() {
+            h13OriginalRenderCells();
+            const layer=document.getElementById('cells-layer');
+            if(!layer) return;
+            CELLS_DATA.forEach(cell=>{
+                const marker=Array.from(layer.children).find(el=>Math.abs(parseFloat(el.style.left)-cell.x)<0.01 && Math.abs(parseFloat(el.style.top)-cell.y)<0.01);
+                if(!marker) return;
+                const total=getCellShelterTotal(cell.id);
+                if(total<=0) return;
+                const mine=currentPlayer ? getShelterCount(cell.id,currentPlayer) : 0;
+                marker.textContent='';
+                const badge=document.createElement('span');
+                badge.className='shelter-count-badge';
+                badge.textContent = mine > 0 ? `${mine}/${total}` : String(total);
+                badge.setAttribute('aria-label', mine > 0 ? `Ваши убежища: ${mine}; всего: ${total}` : `Всего убежищ: ${total}; ваших отметок нет`);
+                marker.appendChild(badge);
+            });
+        };
+
+        // SVG cross spans the polygon's diagonal and scales consistently on desktop/mobile.
+        const h13OriginalRenderSiege = renderSiege;
+        renderSiege = function() {
+            h13OriginalRenderSiege();
+            const layer=document.getElementById('siege-cells-layer');
+            if(!layer) return;
+            layer.querySelectorAll('.personal-cell-cross').forEach(c=>{
+                c.innerHTML='<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><line x1="5" y1="5" x2="95" y2="95"></line><line x1="5" y1="95" x2="95" y2="5"></line></svg>';
+            });
+        };
+
+        // Keep vertical page scrolling available at the map's base scale; preserve custom pan/pinch when zoomed.
+        const h13OriginalInitMapZoom = initMapZoom;
+        initMapZoom = function() {
+            h13OriginalInitMapZoom();
+            Object.values(MAP_ZOOM_CONFIG).forEach(cfg=>{
+                const view=document.getElementById(cfg.viewport);
+                if(view) {
+                    view.style.touchAction='pan-y';
+                    view.addEventListener('pointerdown',()=>{
+                        const st=mapZoomLoad(view.dataset.mapZoom);
+                        if(st && st.scale>1.001) view.style.touchAction='none';
+                    },{passive:true});
+                    view.addEventListener('pointerup',()=>{
+                        const key=view.dataset.mapZoom;
+                        const st=key?mapZoomLoad(key):null;
+                        if(!st || st.scale<=1.001) view.style.touchAction='pan-y';
+                    },{passive:true});
+                }
+            });
+        };
+
+        // Keep map-first layout in shelters and compact the content around all maps.
+        const h13ApplyCompactUi = () => {
+            h13InsertMapControls();
+            setTimeout(() => {
+                h13InsertMapControls();
+                renderCells();
+                renderSiege();
+                updateZoneSyncLabel();
+            }, 250);
+        };
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', h13ApplyCompactUi, { once:true });
+        else h13ApplyCompactUi();
+
     </script>
 
     <!-- ИМПОРТ JSON КОНКУРЕНТОВ -->
@@ -4080,6 +4498,13 @@ if (resetDamageCellIds.length) {
         <textarea id="tactics-import-json" rows="9" class="w-full rounded-lg border border-slate-700 bg-slate-950 p-3 font-mono text-[11px] text-slate-100" placeholder="Вставь JSON ответа страницы клана сюда…"></textarea>
         <div id="tactics-import-message" class="text-xs text-slate-400">Номер участника не используется как постоянный ID: список состава обновляется при каждом импорте.</div>
         <div class="flex gap-2"><button onclick="importTacticsClanJson()" class="flex-1 rounded-lg bg-violet-700 px-3 py-2.5 text-xs font-bold text-white">Проверить и сохранить</button><button onclick="closeTacticsImport()" class="rounded-lg bg-slate-800 px-4 py-2.5 text-xs text-slate-300">Отмена</button></div>
+      </div>
+    </div>
+
+    <div id="h13-map-help-modal" onclick="closeMapHelp()">
+      <div id="h13-map-help-card" onclick="event.stopPropagation()">
+        <div class="flex items-center justify-between gap-3 mb-3"><h3 id="h13-map-help-title">ⓘ Памятка по карте</h3><button type="button" onclick="closeMapHelp()" class="rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-slate-200">✕</button></div>
+        <div id="h13-map-help-content"></div>
       </div>
     </div>
 
