@@ -497,10 +497,25 @@ body { padding:5px 5px calc(72px + env(safe-area-inset-bottom)) !important; over
 #siege-map-container .map-zoom-controls { bottom:5px !important; }
 #siege-map-container #personal-mark-toggle { bottom:5px !important; }
 #siege-map-container #map-layers-panel { z-index:70; }
+/* Шапка авторизации: роль, ник и выход всегда в одной адаптивной строке. */
+#main-app > header { display:flex !important; flex-direction:row !important; flex-wrap:nowrap !important; align-items:center !important; justify-content:space-between !important; min-width:0; }
+#main-app > header > div:first-child { display:flex !important; flex:0 1 auto !important; flex-wrap:nowrap !important; min-width:0; width:auto !important; justify-content:flex-start !important; }
+#main-app > header > div:last-child { display:flex !important; flex:1 1 auto !important; min-width:0; width:auto !important; justify-content:flex-end !important; gap:4px !important; padding:0 0 0 5px !important; }
+#main-app > header > div:last-child > span { min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; font-size:10px !important; }
+#main-app > header #current-user-display { display:inline-block; max-width:100%; overflow:hidden; text-overflow:ellipsis; vertical-align:bottom; }
+#main-app > header > div:last-child button[onclick="logout()"] { flex:0 0 auto; margin:0 !important; padding:5px 7px; border:1px solid rgba(248,113,113,.35); border-radius:7px; white-space:nowrap; }
+#zone-sync-row { flex-wrap:nowrap !important; justify-content:space-between !important; gap:7px; }
+#zone-sync-label { flex:1 1 auto !important; min-width:0 !important; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:left !important; }
 @media (max-width:520px) {
-  #zone-sync-row { flex-wrap:wrap; gap:5px; padding:6px; }
-  #zone-sync-label { flex:1 1 100%; font-size:10px !important; }
-  #zone-import-open-btn:not(.hidden) { min-height:32px; height:32px; }
+  #main-app > header { padding:5px 5px !important; gap:3px !important; }
+  #main-app > header > div:first-child { gap:4px !important; }
+  #main-app > header #user-role-badge { font-size:9px !important; padding:3px 4px !important; max-width:90px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  #main-app > header > div:last-child > span { font-size:9px !important; }
+  #main-app > header > div:last-child button[onclick="logout()"] { font-size:10px !important; padding:4px 5px; }
+  #zone-sync-row { flex-wrap:nowrap; gap:5px; padding:5px; justify-content:space-between; }
+  #zone-sync-label { flex:1 1 auto; min-width:0; font-size:9px !important; text-align:left !important; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #zone-import-open-btn:not(.hidden) { min-height:30px; height:30px; padding:0 7px; gap:4px; font-size:10px; }
+  #zone-import-open-btn .h13-zone-import-label { font-size:10px; }
 }
 
 #tab-content-shelters {
@@ -704,8 +719,9 @@ body { padding:5px 5px calc(72px + env(safe-area-inset-bottom)) !important; over
                     <div id="map-layers-panel" class="hidden" aria-hidden="true">
                         <div id="map-layers-backdrop" onclick="closeMapLayersPanel()" aria-label="Закрыть меню"></div>
                         <div id="map-layers-drawer" onclick="event.stopPropagation()">
-                            <div class="sticky top-0 z-10 flex items-center gap-2 px-3 py-3 border-b border-slate-700/50" style="background:rgba(2,6,23,.48);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)">
-                                <div><div class="text-[10px] font-black tracking-[.16em] text-cyan-300">H13 // TACTICAL MAP</div><div class="text-sm font-bold text-slate-100 mt-0.5">Слои и фильтры</div></div>
+                            <div class="sticky top-0 z-10 flex items-center gap-2 px-3 py-3 border-b border-slate-700/50" style="background:rgba(2,6,23,.72);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)">
+                                <div class="min-w-0 flex-1"><div class="text-[10px] font-black tracking-[.16em] text-cyan-300">H13 // TACTICAL MAP</div><div class="text-sm font-bold text-slate-100 mt-0.5">Слои и фильтры</div></div>
+                                <button id="map-layers-close" type="button" onclick="closeMapLayersPanel()" aria-label="Закрыть меню слоёв и фильтров" title="Закрыть меню" style="flex:0 0 34px;width:34px;height:34px;border-radius:8px;border:1px solid rgba(148,163,184,.55);background:rgba(15,23,42,.9);color:#f1f5f9;font-size:22px;line-height:1">×</button>
                             </div>
                             <div class="map-filter-section">
                                 <div class="map-filter-title">Отображение меток</div>
@@ -4313,7 +4329,7 @@ if (resetDamageCellIds.length) {
         }
         // --- конец Тактики ---
 
-        window.addEventListener('DOMContentLoaded', () => { initMapZoom(); syncMapFilterControls(); checkAuthOnLoad(); loadTacticsSnapshots(); });
+        window.addEventListener('DOMContentLoaded', () => { initMapZoom(); syncMapFilterControls(); checkAuthOnLoad(); loadTacticsSnapshots(); document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMapLayersPanel(); }); });
         setInterval(() => {
             advanceExpiredZoneCycles();
             renderSiege();
