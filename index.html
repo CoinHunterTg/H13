@@ -1339,6 +1339,28 @@ body { padding:5px 5px calc(72px + env(safe-area-inset-bottom)) !important; over
         }
         window.addEventListener('resize', () => Object.keys(MAP_ZOOM_CONFIG).forEach(k=>applyMapZoom(k, false)));
 
+        // Telegram Desktop/WebView иногда не передаёт обычное колесо мыши
+        // прокручиваемому документу, когда курсор находится над картой.
+        // Перенаправляем прокрутку странице, сохраняя прокрутку внутренних списков.
+        document.addEventListener('wheel', function (e) {
+            if (e.ctrlKey || e.metaKey || e.defaultPrevented) return;
+            const target = e.target instanceof Element ? e.target : null;
+            if (!target) return;
+            // Не прокручиваем страницу поверх открытых модальных окон.
+            const activeOverlay = target.closest('.fixed.inset-0:not(.hidden), #h13-map-help-modal.open');
+            if (activeOverlay) return;
+            const inner = target.closest('#map-layers-drawer, #players-list, #arsenal-list, #siege-damage-registration-list, #card-siege-owners-list, #cell-modal-players-list, textarea, [contenteditable="true"], .overflow-y-auto');
+            if (inner && inner.scrollHeight > inner.clientHeight + 1) {
+                const canScrollUp = e.deltaY < 0 && inner.scrollTop > 0;
+                const canScrollDown = e.deltaY > 0 && inner.scrollTop + inner.clientHeight < inner.scrollHeight - 1;
+                if (canScrollUp || canScrollDown) return;
+            }
+            const root = document.scrollingElement || document.documentElement;
+            if (root.scrollHeight <= root.clientHeight + 1) return;
+            e.preventDefault();
+            window.scrollBy(0, e.deltaY);
+        }, { passive: false });
+
         function switchTab(tabName) {
             const tabs = {
                 siege: document.getElementById('tab-content-siege'),
